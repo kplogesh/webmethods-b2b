@@ -1,0 +1,111 @@
+{{- $workloadObjectName := index .Values (tpl .Values.workloadObjectName .) }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: 
+  name: {{ include "microservices-runtime.fullname" . }}
+spec:
+  serviceName: {{ include "microservices-runtime.fullname" . }}-h
+  selector:
+    matchLabels:
+      app: {{ include "microservices-runtime.fullname" . }}
+      component: msr
+  replicas: {{ $workloadObjectName.replicas }}
+  podManagementPolicy: {{ $workloadObjectName.podManagementPolicy }}
+  updateStrategy:
+    rollingUpdate:
+      partition: {{ $workloadObjectName.partition }}
+    type: {{ $workloadObjectName.updateStrategy }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "microservices-runtime.fullname" . }}
+        component: msr
+    spec:
+      {{- if (eq ($workloadObjectName.setNodeAffinity | toString) "true") }}    
+      affinity:
+      {{- if (eq ($workloadObjectName.nodeAffinity | toString) "required") }}
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - "{{ $workloadObjectName.appName }}"
+      {{- else if (eq ($workloadObjectName.nodeAffinity | toString) "preferred") }}
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - "{{ $workloadObjectName.appName }}"          
+      {{- end}}
+      {{- end}}      
+      {{- if (eq ($workloadObjectName.setTolerations | toString) "true") }}                            
+      tolerations:
+      - key: "app"
+        operator: "Equal"
+        value: "{{ $workloadObjectName.appName }}"
+        effect: "NoSchedule"    
+      {{- end}} 
+      securityContext:
+        fsGroup: {{ $workloadObjectName.fsGroup }}
+        runAsUser: {{ $workloadObjectName.runAsUser }}         
+      containers:          
+        - name: {{ $workloadObjectName.containerName }}  
+          {{- $containerName := index .Values ( $workloadObjectName.containerName ) }} 
+          image: "{{ $containerName.image }}:{{ $containerName.imageTag }}"
+          imagePullPolicy: {{ $containerName.imagePullPolicy }}
+          lifecycle:
+            postStart:
+              exec:
+                command:
+{{toYaml $containerName.postStartCommand | indent 18 }}
+            preStop:
+              exec:
+                command:
+{{toYaml $containerName.preStopCommand | indent 18 }}                 
+        # Resources required for the apigateway to function. CPUs and Memory configurations.
+          resources:
+            limits:
+              cpu: {{ $containerName.limitcpu }}
+              memory: {{ $containerName.limitmemory }} 
+            requests:
+              cpu: {{ $containerName.requestcpu }}
+              memory: {{ $containerName.requestmemory }}  
+          env:
+          - name: JAVA_MIN_MEM
+            value: {{ $containerName.JAVA_MIN_MEM }}
+          - name: JAVA_MAX_MEM
+            value: {{ $containerName.JAVA_MAX_MEM }}        
+          - name: LD_LIBRARY_PATH
+            value: "$LD_LIBRARY_PATH:{{ $containerName.LibPath }}"
+          ports:
+            - containerPort: {{ $containerName.httpPort }}
+              name: http
+            - containerPort: {{ $containerName.httpsPort }}
+              name: https
+          livenessProbe:           
+{{ toYaml $containerName.livenessProbe | indent 12 }}
+          readinessProbe:
+{{ toYaml $containerName.readinessProbe | indent 12 }}
+          startupProbe:
+{{ toYaml $containerName.startupProbe | indent 12 }}
+          volumeMounts:
+{{ toYaml $containerName.volumeMounts | indent 12 }}                
+      imagePullSecrets:
+        - name: {{ $workloadObjectName.imagePullSecrets }}              
+      volumes:
+      - name: application-config
+        configMap:
+          name: {{ include "microservices-runtime.fullname" . }}
+      - name: b2b-nfs-directory
+        persistentVolumeClaim:
+          claimName: {{ .Values.PersistentVolumeClaimName }}
+      - name: secret-volume
+        secret:
+          secretName: {{ .Values.secretName }}
+      - name: create-dir
+        emptyDir: {}      

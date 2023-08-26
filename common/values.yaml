@@ -1,0 +1,20 @@
+---
+fullnameOverride: ""
+nameOverride: ""
+environment: dev
+
+workloadObjectName: &workloadObjectName
+  "general"
+
+# Persistent Volume Claim
+PersistentVolumeClaimName: b2b-nfs-storage
+ 
+PersistentVolumeClaim:
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+# Secrets
+secretName: b2b-secrets

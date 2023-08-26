@@ -1,0 +1,92 @@
+{{- $workloadObjectName := index .Values (tpl .Values.workloadObjectName .) }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: 
+  name: {{ include "terracotta-bigmemorymax.fullname" . }}
+spec:
+  serviceName: {{ include "terracotta-bigmemorymax.fullname" . }}-h
+  selector:
+    matchLabels:
+      app: {{ include "terracotta-bigmemorymax.fullname" . }}
+      component: caching
+  replicas: {{ $workloadObjectName.replicas }}
+  podManagementPolicy: {{ $workloadObjectName.podManagementPolicy }}
+  updateStrategy:
+    rollingUpdate:
+      partition: {{ $workloadObjectName.partition }}
+    type: {{ $workloadObjectName.updateStrategy }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "terracotta-bigmemorymax.fullname" . }}
+        component: caching
+    spec:
+      {{- if (eq ($workloadObjectName.setNodeAffinity | toString) "true") }}    
+      affinity:
+      {{- if (eq ($workloadObjectName.nodeAffinity | toString) "required") }}
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - "{{ $workloadObjectName.appName }}"
+      {{- else if (eq ($workloadObjectName.nodeAffinity | toString) "preferred") }}
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - "{{ $workloadObjectName.appName }}"          
+      {{- end}}
+      {{- end}}      
+      {{- if (eq ($workloadObjectName.setTolerations | toString) "true") }}                            
+      tolerations:
+      - key: "app"
+        operator: "Equal"
+        value: "{{ $workloadObjectName.appName }}"
+        effect: "NoSchedule"    
+      {{- end}} 
+      securityContext:
+        fsGroup: {{ $workloadObjectName.fsGroup }}
+        runAsUser: {{ $workloadObjectName.runAsUser }}         
+      containers:          
+        - name: {{ $workloadObjectName.containerName }}  
+          {{- $containerName := index .Values ( $workloadObjectName.containerName ) }} 
+          image: "{{ $containerName.image }}:{{ $containerName.imageTag }}"
+          imagePullPolicy: {{ $containerName.imagePullPolicy }}         
+        # Resources required for the apigateway to function. CPUs and Memory configurations.
+          resources:
+            limits:
+              cpu: {{ $containerName.limitcpu }}
+              memory: {{ $containerName.limitmemory }} 
+            requests:
+              cpu: {{ $containerName.requestcpu }}
+              memory: {{ $containerName.requestmemory }}  
+          env:
+          - name: ACCEPT_EULA
+            value: {{ $containerName.ACCEPT_EULA }}
+          ports:
+            - containerPort: {{ $containerName.serverPort }}
+              name: {{ $containerName.serverPortName }}
+            - containerPort: {{ $containerName.replicationPort }}
+              name: {{ $containerName.replicationPortName }}
+            - containerPort: {{ $containerName.managementPort }}
+              name: {{ $containerName.managementPortName }}
+          livenessProbe:           
+{{ toYaml $containerName.livenessProbe | indent 12 }}
+          readinessProbe:
+{{ toYaml $containerName.readinessProbe | indent 12 }}
+          volumeMounts:
+{{ toYaml $containerName.volumeMounts | indent 12 }}                    
+      imagePullSecrets:
+        - name: {{ $workloadObjectName.imagePullSecrets }}              
+      volumes:
+      - name: config-volume
+        configMap:
+          name: {{ include "terracotta-bigmemorymax.fullname" . }}
+  volumeClaimTemplates:
+{{ toYaml $workloadObjectName.volumeClaimTemplates | indent 4 }}    

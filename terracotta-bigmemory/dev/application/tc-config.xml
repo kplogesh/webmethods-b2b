@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright (c) 2015-2017 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA, and/or its subsidiaries and/or its affiliates and/or their licensors.
+Use, reproduction, transfer, publication or disclosure is prohibited except as specifically provided for in your License Agreement with Software AG
+-->
+
+<tc:tc-config xmlns:tc="http://www.terracotta.org/config">
+
+    <servers>
+    <mirror-group>
+        <server host="terracotta-bigmemorymax-0.terracotta-bigmemorymax-h.dev.svc.cluster.local" name="terracotta-bigmemorymax-0.terracotta-bigmemorymax-h.dev.svc.cluster.local" >
+        <tsa-port>9510</tsa-port>
+        <management-port>9540</management-port>
+        <tsa-group-port>9530</tsa-group-port>
+        <dataStorage size="4g">
+            <offheap size="2g"/>
+            <hybrid/>
+        </dataStorage>
+        <data>/opt/softwareag/run/data</data>
+        <data-backup>/opt/softwareag/run/backup</data-backup>
+        <logs>/opt/softwareag/run/logs</logs>
+        </server>
+    </mirror-group>
+    <restartable enabled="true"/>
+    </servers>
+    <clients>
+    <logs>/opt/softwareag/run/client-logs</logs>
+    </clients>
+</tc:tc-config>
