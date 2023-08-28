@@ -11,13 +11,28 @@ workloadObjectName: &workloadObjectName
   # Hard means that by default pods will only be scheduled if there are enough nodes for them
   # and that they will never end up on the same node. Setting this to soft will do this "best effort"
   setTolerations: "false"
+  tolerations: 
+    - key: "app"
+      operator: "Equal"
+      value: "b2b"
+      effect: "NoSchedule" 
   # Options for node affinity for pod placement is required | preferred. Whether affinity is required or not is decided by setNodeAffinity parameter that can be set to true | false
   setNodeAffinity: "false"
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - "b2b" 
   nodeAffinity: "required"
   # Options for adding tolerations is true | false
   #securityConext values
-  fsGroup: "1724"
-  runAsUser: "1724"
+  podSecurityContext:
+    fsGroup: 1724
+    runAsUser: 1724
   replicas: 1
   podManagementPolicy: OrderedReady
   updateStrategy: RollingUpdate
@@ -45,24 +60,30 @@ workloadObjectName: &workloadObjectName
   # Secret to be used to pull the image from repository
   imagePullSecrets: regcred
 *containerName:
-  image: wmmsrtn
-  imageTag: "10.15.0" 
-  imagePullPolicy: IfNotPresent
-  #Ports
-  httpPort: 5555
-  httpsPort: 5543
+  image: 
+    repository: wmmsrtn
+    tag: "10.15.0" 
+    pullPolicy: IfNotPresent
   # Resources required for the apigateway to function. CPUs and Memory configurations.
-  #limits:
-  limitcpu: "1"
-  limitmemory: "4G"
-  #Request:
-  requestcpu: "1"
-  requestmemory: "4G"
-  #JVM
-  JAVA_MIN_MEM: "1024M"
-  JAVA_MAX_MEM: "2048M" 
-  #Library Path
-  LibPath: /opt/softwareag/IntegrationServer/lib
+  resources:
+    limits:
+      cpu: 1
+      memory: "4G"
+    requests:
+      cpu: 1
+      memory: "4G" 
+  env:
+    - name: JAVA_MIN_MEM
+      value: "1024M"
+    - name: JAVA_MAX_MEM
+      value: "2048M"        
+    - name: LD_LIBRARY_PATH
+      value: "/opt/softwareag/IntegrationServer/lib"
+  ports:
+    - containerPort: 5555
+      name: http
+    - containerPort: 5543
+      name: https
   # Liveness probe to check whether container is active. Restart happens when liveness probe fails.
   livenessProbe:
     timeoutSeconds: 5
@@ -88,42 +109,36 @@ workloadObjectName: &workloadObjectName
     failureThreshold: 20
     periodSeconds: 20
   # Volume mount required for the application to function
-  volumeMounts:
-    - mountPath: /opt/softwareag/IntegrationServer/bin/../config/licenseKey.xml
-      subPath: msr-licenseKey.xml
-      name: application-config
-    - mountPath: /opt/softwareag/common/conf/terracotta-license.key
-      subPath: terracotta-license.key
-      name: application-config
-    - name: application-config
-      mountPath: /opt/softwareag/IntegrationServer/application.properties
-      subPath: application.properties  
-    - name: application-config
-      mountPath: /opt/softwareag/IntegrationServer/packages/WmEDIINT/config/properties.cnf
-      subPath: ediint-properties.cnf
-    - mountPath: /b2bdir
-      name: create-dir  
-    - name: b2b-nfs-directory   
-      mountPath: /b2bdir/demo
-    - name: secret-volume 
-      mountPath: /etc/secrets
-      readOnly: true   
+  msrLicensePath: /opt/softwareag/IntegrationServer/bin/../config/licenseKey.xml
+  msrLicenseFileName: msr-licenseKey.xml
+  tcLicensePath: /opt/softwareag/common/conf/terracotta-license.key
+  tcLicenseFileName: terracotta-license.key
+  applicationPropertiesPath: /opt/softwareag/IntegrationServer/application.properties
+  applicationPropertiesFileName: application.properties
+  ediintPropertiesPath: /opt/softwareag/IntegrationServer/packages/WmEDIINT/config/properties.cnf
+  ediintFileName: ediint-properties.cnf
+  nfsPath: /b2bdir/demo
+  containerPath: /b2bdir
+  secretsPath: /etc/secrets
   # PostStart command execution
-  postStartCommand: 
-    - /bin/sh
-    - -c
-    - |
-      sed -i 's/notateit/sapgw10s/g' /etc/services
-      mkdir -p /b2bdir/demo/platinum
-      mkdir -p /b2bdir/demo/platinum/work
-      mkdir -p /b2bdir/demo/platinum/error
-      mkdir -p /b2bdir/demo/platinum/done
-  # PreStop command execution
-  preStopCommand: 
-    - /bin/sh
-    - -c
-    - sleep 50
-
+  lifecycle:
+    postStart:
+      exec:
+        command:
+          - /bin/sh
+          - -c
+          - |
+            sed -i 's/notateit/sapgw10s/g' /etc/services
+            mkdir -p /b2bdir/demo/platinum
+            mkdir -p /b2bdir/demo/platinum/work
+            mkdir -p /b2bdir/demo/platinum/error
+            mkdir -p /b2bdir/demo/platinum/done
+    preStop:
+      exec:
+        command:
+          - /bin/sh
+          - -c
+          - sleep 50
 # Persistent Volume Claim
 PersistentVolumeClaimName: b2b-nfs-storage
 

@@ -21,80 +21,66 @@ spec:
         app: {{ include "microservices-runtime.fullname" . }}
         component: msr
     spec:
-      {{- if (eq ($workloadObjectName.setNodeAffinity | toString) "true") }}    
+      {{- with $workloadObjectName.affinity }}   
       affinity:
-      {{- if (eq ($workloadObjectName.nodeAffinity | toString) "required") }}
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - "{{ $workloadObjectName.appName }}"
-      {{- else if (eq ($workloadObjectName.nodeAffinity | toString) "preferred") }}
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - "{{ $workloadObjectName.appName }}"          
-      {{- end}}
-      {{- end}}      
-      {{- if (eq ($workloadObjectName.setTolerations | toString) "true") }}                            
+        {{- toYaml . | nindent 8 }}
+      {{- end }}      
+      {{- with $workloadObjectName.tolerations }}                           
       tolerations:
-      - key: "app"
-        operator: "Equal"
-        value: "{{ $workloadObjectName.appName }}"
-        effect: "NoSchedule"    
-      {{- end}} 
+        {{- toYaml . | nindent 8 }}    
+      {{- end }} 
       securityContext:
-        fsGroup: {{ $workloadObjectName.fsGroup }}
-        runAsUser: {{ $workloadObjectName.runAsUser }}         
+        {{- toYaml $workloadObjectName.podSecurityContext | nindent 8 }} 
       containers:          
         - name: {{ $workloadObjectName.containerName }}  
           {{- $containerName := index .Values ( $workloadObjectName.containerName ) }} 
-          image: "{{ $containerName.image }}:{{ $containerName.imageTag }}"
-          imagePullPolicy: {{ $containerName.imagePullPolicy }}
+          image: "{{ $containerName.image.repository }}:{{ $containerName.image.tag }}"
+          imagePullPolicy: {{ $containerName.image.pullPolicy }}
+          {{- with $containerName.lifecycle }} 
           lifecycle:
-            postStart:
-              exec:
-                command:
-{{toYaml $containerName.postStartCommand | indent 18 }}
-            preStop:
-              exec:
-                command:
-{{toYaml $containerName.preStopCommand | indent 18 }}                 
-        # Resources required for the apigateway to function. CPUs and Memory configurations.
+            {{- toYaml . | nindent 12 }}  
+          {{- end }}
+        # Resources required for the MSR to function. CPUs and Memory configurations.
           resources:
-            limits:
-              cpu: {{ $containerName.limitcpu }}
-              memory: {{ $containerName.limitmemory }} 
-            requests:
-              cpu: {{ $containerName.requestcpu }}
-              memory: {{ $containerName.requestmemory }}  
+            {{- toYaml $containerName.resources | nindent 12 }} 
+          {{- with $containerName.env }} 
           env:
-          - name: JAVA_MIN_MEM
-            value: {{ $containerName.JAVA_MIN_MEM }}
-          - name: JAVA_MAX_MEM
-            value: {{ $containerName.JAVA_MAX_MEM }}        
-          - name: LD_LIBRARY_PATH
-            value: "$LD_LIBRARY_PATH:{{ $containerName.LibPath }}"
+            {{- toYaml . | nindent 12 }} 
+          {{- end }}
           ports:
-            - containerPort: {{ $containerName.httpPort }}
-              name: http
-            - containerPort: {{ $containerName.httpsPort }}
-              name: https
+            {{- toYaml $containerName.ports | nindent 12 }} 
+          {{- with $containerName.livenessProbe }}
           livenessProbe:           
-{{ toYaml $containerName.livenessProbe | indent 12 }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $containerName.readinessProbe }}
           readinessProbe:
-{{ toYaml $containerName.readinessProbe | indent 12 }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $containerName.startupProbe }}
           startupProbe:
-{{ toYaml $containerName.startupProbe | indent 12 }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
-{{ toYaml $containerName.volumeMounts | indent 12 }}                
+            - mountPath: {{ $containerName.msrLicensePath }}
+              subPath: {{ $containerName.msrLicenseFileName }}
+              name: application-config
+            - mountPath: {{ $containerName.tcLicensePath }}
+              subPath: {{ $containerName.tcLicenseFileName }}
+              name: application-config
+            - name: application-config
+              mountPath: {{ $containerName.applicationPropertiesPath }}
+              subPath: {{ $containerName.applicationPropertiesFileName }} 
+            - name: application-config
+              mountPath: {{ $containerName.ediintPropertiesPath }} 
+              subPath: {{ $containerName.ediintFileName }} 
+            - mountPath: {{ $containerName.containerPath }}
+              name: create-dir  
+            - name: b2b-nfs-directory   
+              mountPath: {{ $containerName.nfsPath }}
+            - name: secret-volume 
+              mountPath: {{ $containerName.secretsPath }}
+              readOnly: true                
       imagePullSecrets:
         - name: {{ $workloadObjectName.imagePullSecrets }}              
       volumes:
