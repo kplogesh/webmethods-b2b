@@ -1,105 +1,111 @@
 ---
-MSRName: "alpha-msr"
-versionName: v2
 fullnameOverride: ""
+nameOverride: ""
 environment: dev
 
-workloadObjectName: &workloadObjectName
-  "terracotta-bigmemorymax"
-*workloadObjectName:
-  containerName: &containerName
-    "terracotta-bigmemorymax-container"    
-  # Hard means that by default pods will only be scheduled if there are enough nodes for them
-  # and that they will never end up on the same node. Setting this to soft will do this "best effort"
-  setTolerations: "false"
+podConfig:    
+  tolerations: 
+    - key: "app"
+      operator: "Equal"
+      value: "b2b"
+      effect: "NoSchedule" 
   # Options for node affinity for pod placement is required | preferred. Whether affinity is required or not is decided by setNodeAffinity parameter that can be set to true | false
-  setNodeAffinity: "false"
-  nodeAffinity: "required"
-  # Options for adding tolerations is true | false
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - "b2b" 
   #securityConext values
-  fsGroup: "1724"
-  runAsUser: "1724"
-  replicas: 1
+  podSecurityContext:
+    fsGroup: 1724
+    runAsUser: 1724
+  serviceAccountName: b2b-sa
+  replicas: 2
   podManagementPolicy: OrderedReady
   updateStrategy: RollingUpdate
   partition: 0
   appName: b2b
-  # Volume mount to volume mapping
-  volumes:
-    - name: config-volume
-      configMap:
-        name: *workloadObjectName
-    - name: license-volume
-      configMap:
-        name: license-tc-cm
   # Secret to be used to pull the image from repository
   imagePullSecrets: regcred
   # Volume Claim Templates
-  volumeClaimTemplates:
-  - metadata:
-      name: diskstore
-      labels:
-        type: terracotta-store
-    spec:
-      accessModes: 
-      - ReadWriteOnce
-      storageClassName: local-path
-      resources:
-        requests:
-          storage: 2Gi
-*containerName:
-  image: sagcr.azurecr.io/bigmemorymax-server
-  imageTag: "4.4" 
-  imagePullPolicy: IfNotPresent
-  #Ports
-  serverPortName: server
-  serverPort: 9510
-  managementPortName: management
-  managementPort: 9540
-  replicationPortName: replication
-  replicationPort: 9530
-  # Resources required for the apigateway to function. CPUs and Memory configurations.
-  #limits:
-  limitcpu: "1"
-  limitmemory: "3G"
-  #Request:
-  requestcpu: "1"
-  requestmemory: "3G"
-  # Liveness probe to check whether container is active. Restart happens when liveness probe fails.
-  livenessProbe:
-    exec:
-      # Handling 400 status as well as in case of PASSIVE(terracotta-0) and ACTIVE(terracotta-1) startup scenario there is a deadlock.
-      command: ["sh", "-c", "status_code=$(wget --spider -S 'http://localhost:9510/config' 2>&1 | grep 'HTTP/' | awk '{print $2}'); if [ $status_code -eq \"200\" ] || [ $status_code -eq \"400\" ]; then exit 0; fi; exit 1"]
-    initialDelaySeconds: 15
-    periodSeconds: 15
-    timeoutSeconds: 5
-    failureThreshold: 100
-  # Readiness probe to check whether container is ready. Restart happens when readiness probe fails.
-  readinessProbe:
-    exec:
-      # Handling 400 status as well as in case of PASSIVE(terracotta-0) and ACTIVE(terracotta-1) startup scenario there is a deadlock.
-      command: ["sh", "-c", "status_code=$(wget --spider -S 'http://localhost:9510/config' 2>&1 | grep 'HTTP/' | awk '{print $2}'); if [ $status_code -eq \"200\" ] || [ $status_code -eq \"400\" ]; then exit 0; fi; exit 1"]
-    initialDelaySeconds: 15
-    periodSeconds: 15
-    timeoutSeconds: 5
-    failureThreshold: 100
-  # Volume mount required for the application to function
-  volumeMounts:
-    - name: diskstore
-      mountPath: /opt/softwareag/run/data
-    - name: diskstore
-      mountPath: /opt/softwareag/run/backup
-    - name: diskstore
-      mountPath: /opt/softwareag/run/logs
-    - name: diskstore
-      mountPath: /opt/softwareag/run/client-logs
-    - name: config-volume
-      mountPath: /opt/softwareag/config/tc-config.xml
-      subPath: tc-config.xml
-    - name: config-volume
-      mountPath: /opt/softwareag/config/license.key
-      subPath: terracotta-license.key
+  diskAccessMode: ReadWriteOnce
+  storageClassName: local-path
+  diskStorage: 2Gi
+  primaryContainer:
+    image: 
+      repository: sagcr.azurecr.io/bigmemorymax-server
+      tag: "" 
+      pullPolicy: IfNotPresent
+    stripeCount: 1
+    nodeCountPerStripe: 2
+    restartable: false
+    jsonLogging: false
+    storeSize: "2G"
+    # Can be used for passing some jvm related options for terracotta servers.
+    serverOpts: ""
+    # Can be used for passing some jvm related options for tmc.
+    tmcOpts: ""
+    security: false
+    selfSignedCerts: true
+    # Create a secret manually in cluster which contains all the necessary certs, files etc. for all the servers 
+    # as well as tmc as the same secret will be mounted to all the pods deployed via this helm chart.
+    secretName:
+    #Ports
+    ports:
+      - containerPort: 9510
+        name: server
+      - containerPort: 9530
+        name: replication
+      - containerPort: 9540
+        name: management
+    # Resources required for the apigateway to function. CPUs and Memory configurations.
+    resources:
+      limits:
+        cpu: 1
+        memory: "4G"
+      requests:
+        cpu: 1
+        memory: "4G" 
+    # Liveness probe to check whether container is active. Restart happens when liveness probe fails.
+    livenessProbe:
+      tcpSocket:
+        port: 9530
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      successThreshold: 1
+      timeoutSeconds: 5
+      failureThreshold: 3
+    # Readiness probe to check whether container is ready. Restart happens when readiness probe fails.
+    readinessProbe:
+      tcpSocket:
+        port: 9530
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      successThreshold: 1
+      timeoutSeconds: 5
+      failureThreshold: 3
+    startupProbe:
+      tcpSocket:
+        port: 9530
+      initialDelaySeconds: 0
+      periodSeconds: 5
+      successThreshold: 1
+      timeoutSeconds: 5
+      failureThreshold: 120
+    # Volume mount required for the application to function
+    runtimePath: /opt/softwareag/run
+    tcConfigPath: /opt/softwareag/config/tc-config.xml
+    tcConfigFileName: tc-config.xml
+    tcLicensePath: /opt/softwareag/config/license.key
+    tcLicenseFileName: terracotta-license.key
 #Service definition
+service:
+  type: ClusterIP
+  serverPort: 9510
 headlessPortDef:
   - port: 9510
     name: tcp-server     

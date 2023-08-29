@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: 
+  name: {{ include "microservices-runtime.fullname" . }}
+  labels:
+    {{- include "microservices-runtime.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "microservices-runtime.fullname" . }}-h
+  selector:
+    matchLabels:
+      {{- include "microservices-runtime.selectorLabels" . | nindent 6 }}
+  {{- if not .Values.podConfig.autoScaling.enabled }}
+  replicas: {{ .Values.podConfig.replicas }}
+  {{- end }}
+  podManagementPolicy: {{ .Values.podConfig.podManagementPolicy }}
+  updateStrategy:
+    rollingUpdate:
+      partition: {{ .Values.podConfig.partition }}
+    type: {{ .Values.podConfig.updateStrategy }}
+  template:
+    metadata:
+      labels:
+        {{- include "microservices-runtime.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.podConfig.affinity }}   
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}      
+      {{- with .Values.podConfig.tolerations }}                           
+      tolerations:
+        {{- toYaml . | nindent 8 }}    
+      {{- end }} 
+      securityContext:
+        {{- toYaml .Values.podConfig.podSecurityContext | nindent 8 }} 
+      serviceAccountName: {{ .Values.podConfig.serviceAccountName }}
+      containers:          
+        - name: {{ include "microservices-runtime.fullname" . }}-primary-container
+          image: "{{ .Values.podConfig.primaryContainer.image.repository }}:{{ .Values.podConfig.primaryContainer.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.podConfig.primaryContainer.image.pullPolicy }}
+          {{- with .Values.podConfig.primaryContainer.lifecycle }} 
+          lifecycle:
+            {{- toYaml . | nindent 12 }}  
+          {{- end }}
+        # Resources required for the MSR to function. CPUs and Memory configurations.
+          resources:
+            {{- toYaml .Values.podConfig.primaryContainer.resources | nindent 12 }} 
+          {{- with .Values.podConfig.primaryContainer.env }} 
+          env:
+            {{- toYaml . | nindent 12 }} 
+          {{- end }}
+          ports:
+            {{- toYaml .Values.podConfig.primaryContainer.ports | nindent 12 }} 
+          {{- with .Values.podConfig.primaryContainer.livenessProbe }}
+          livenessProbe:           
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.podConfig.primaryContainer.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.podConfig.primaryContainer.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - mountPath: {{ .Values.podConfig.primaryContainer.msrLicensePath }}
+              subPath: {{ .Values.podConfig.primaryContainer.msrLicenseFileName }}
+              name: application-config
+            - mountPath: {{ .Values.podConfig.primaryContainer.tcLicensePath }}
+              subPath: {{ .Values.podConfig.primaryContainer.tcLicenseFileName }}
+              name: application-config
+            - name: application-config
+              mountPath: {{ .Values.podConfig.primaryContainer.applicationPropertiesPath }}
+              subPath: {{ .Values.podConfig.primaryContainer.applicationPropertiesFileName }} 
+            - name: application-config
+              mountPath: {{ .Values.podConfig.primaryContainer.ediintPropertiesPath }} 
+              subPath: {{ .Values.podConfig.primaryContainer.ediintFileName }} 
+            - mountPath: {{ .Values.podConfig.primaryContainer.containerPath }}
+              name: create-dir  
+            - name: b2b-nfs-directory   
+              mountPath: {{ .Values.podConfig.primaryContainer.nfsPath }}
+            - name: secret-volume 
+              mountPath: {{ .Values.podConfig.primaryContainer.secretsPath }}
+              readOnly: true                
+      imagePullSecrets:
+        - name: {{ .Values.podConfig.imagePullSecrets }}              
+      volumes:
+      - name: application-config
+        configMap:
+          name: {{ include "microservices-runtime.fullname" . }}
+      - name: b2b-nfs-directory
+        persistentVolumeClaim:
+          claimName: {{ .Values.podConfig.PersistentVolumeClaimName }}
+      - name: secret-volume
+        secret:
+          secretName: {{ .Values.podConfig.secretName }}
+      - name: create-dir
+        emptyDir: {}      

@@ -2,4 +2,4 @@ apiVersion: v1
 description: Official chart for MSR
 name: alpha-msr
 version: "10.15"
-appVersion: "10.15"
+appVersion: "1.0.0"

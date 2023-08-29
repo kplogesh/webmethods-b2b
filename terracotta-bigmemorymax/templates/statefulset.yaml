@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: 
+  name: {{ include "terracotta-bigmemorymax.fullname" . }} 
+  labels:
+    {{- include "terracotta-bigmemorymax.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "terracotta-bigmemorymax.fullname" . }}-h
+  selector:
+    matchLabels:
+      {{- include "terracotta-bigmemorymax.selectorLabels" . | nindent 6 }}
+  replicas: {{ .Values.podConfig.replicas }}
+  podManagementPolicy: {{ .Values.podConfig.podManagementPolicy }}
+  updateStrategy:
+    rollingUpdate:
+      partition: {{ .Values.podConfig.partition }}
+    type: {{ .Values.podConfig.updateStrategy }}
+  template:
+    metadata:
+      labels:
+        {{- include "terracotta-bigmemorymax.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.podConfig.affinity }}   
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}      
+      {{- with .Values.podConfig.tolerations }}                           
+      tolerations:
+        {{- toYaml . | nindent 8 }}    
+      {{- end }} 
+      securityContext:
+        {{- toYaml .Values.podConfig.podSecurityContext | nindent 8 }} 
+      serviceAccountName: {{ .Values.podConfig.serviceAccountName }}
+      containers:          
+        - name: {{ include "terracotta-bigmemorymax.fullname" . }}-primary-container
+          image: "{{ .Values.podConfig.primaryContainer.image.repository }}:{{ .Values.podConfig.primaryContainer.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.podConfig.primaryContainer.image.pullPolicy }}
+          {{- with .Values.podConfig.primaryContainer.lifecycle }} 
+          lifecycle:
+            {{- toYaml . | nindent 12 }}  
+          {{- end }}
+        # Resources required for the MSR to function. CPUs and Memory configurations.
+          resources:
+            {{- toYaml .Values.podConfig.primaryContainer.resources | nindent 12 }} 
+          env:
+            - name: JSON_LOGGING
+              value: {{ .Values.podConfig.primaryContainer.jsonLogging | quote }}
+            {{- if eq .Values.podConfig.primaryContainer.security true }}
+            {{- if eq .Values.podConfig.primaryContainer.selfSignedCerts true }}
+            - name: JAVA_OPTS
+              value: {{ .Values.podConfig.primaryContainer.serverOpts }} -Djavax.net.ssl.trustStore=/opt/softwareag/run/truststore.jks
+            {{- else }} 
+            {{- if ne .Values.podConfig.primaryContainer.serverOpts "" }}
+            - name: JAVA_OPTS
+              value: {{ .Values.podConfig.primaryContainer.serverOpts }}
+            {{- end }}
+            {{- end }}
+            {{- else }}
+            {{- if ne .Values.podConfig.primaryContainer.serverOpts "" }}
+            - name: JAVA_OPTS
+              value: {{ .Values.podConfig.primaryContainer.serverOpts }}
+            {{- end }}
+            {{- end }}  
+          ports:
+            {{- toYaml .Values.podConfig.primaryContainer.ports | nindent 12 }} 
+          {{- with .Values.podConfig.primaryContainer.livenessProbe }}
+          livenessProbe:           
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.podConfig.primaryContainer.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.podConfig.primaryContainer.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: diskstore
+              mountPath: {{ .Values.podConfig.primaryContainer.runtimePath }} 
+            - name: config-volume
+              mountPath: {{ .Values.podConfig.primaryContainer.tcConfigPath }} 
+              subPath: {{ .Values.podConfig.primaryContainer.tcConfigFileName }} 
+            - name: config-volume
+              mountPath: {{ .Values.podConfig.primaryContainer.tcLicensePath }} 
+              subPath: {{ .Values.podConfig.primaryContainer.tcLicenseFileName }}             
+      imagePullSecrets:
+        - name: {{ .Values.podConfig.imagePullSecrets }}              
+      volumes:
+      - name: config-volume
+        configMap:
+          name: {{ include "terracotta-bigmemorymax.fullname" . }}  
+  volumeClaimTemplates:
+  - metadata:
+      name: diskstore
+      labels:
+        type: terracotta-store
+    spec:
+      accessModes: 
+      - {{ .Values.podConfig.diskAccessMode }} 
+      storageClassName: {{ .Values.podConfig.storageClassName }} 
+      resources:
+        requests:
+          storage: {{ .Values.podConfig.diskStorage }}

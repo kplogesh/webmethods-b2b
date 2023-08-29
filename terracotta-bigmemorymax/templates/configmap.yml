@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "terracotta-bigmemorymax.fullname" . }}
+  labels:
+    app: {{ include "terracotta-bigmemorymax.fullname" . }}
+data:
+  tc-config.xml:
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!--
+    Copyright (c) 2011-2019 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA, and/or its subsidiaries and/or its affiliates and/or their licensors.
+    Use, reproduction, transfer, publication or disclosure is prohibited except as specifically provided for in your License Agreement with Software AG.
+    -->
+    <tc:tc-config xmlns:tc="http://www.terracotta.org/config">
+      <servers secure="{{ .Values.podConfig.primaryContainer.security }}">
+    {{- range $i := until (int $.Values.podConfig.primaryContainer.stripeCount) }}
+        <mirror-group>
+    {{- range $j := until (int $.Values.podConfig.primaryContainer.nodeCountPerStripe) }}
+          <server host="{{ include "terracotta-bigmemorymax.fullname" $ }}-{{ add (mul $i $.Values.nodeCountPerStripe) $j }}.{{ include "terracotta-bigmemorymax.fullname" $ }}-h.{{ $.Release.Namespace }}.svc.cluster.local" name="{{ include "terracotta-bigmemorymax.fullname" $ }}-{{ add (mul $i $.Values.podConfig.primaryContainer.nodeCountPerStripe) $j }}.{{ include "terracotta-bigmemorymax.fullname" $ }}-h.{{ $.Release.Namespace }}.svc.cluster.local">
+            <tsa-port>9510</tsa-port>
+            <tsa-group-port>9530</tsa-group-port>
+            <management-port>9540</management-port>
+            <data>{{ $.Values.podConfig.primaryContainer.runtimePath }}/data</data>
+            <logs>{{ $.Values.podConfig.primaryContainer.runtimePath }}/logs</logs>
+            <dataStorage size={{ $.Values.podConfig.primaryContainer.storeSize | quote }}>
+              <offheap size={{ $.Values.podConfig.primaryContainer.storeSize | quote }}/>
+            </dataStorage>
+            {{- if eq $.Values.podConfig.primaryContainer.security true }}
+            <security>
+              <ssl>
+                <certificate>jks:terracotta-{{ add (mul $i $.Values.podConfig.primaryContainer.nodeCountPerStripe) $j }}-alias@/opt/softwareag/run/terracotta-{{ add (mul $i $.Values.podConfig.primaryContainer.nodeCountPerStripe) $j }}-keystore.jks</certificate>
+              </ssl>
+              <keychain>
+                <class>com.terracotta.management.keychain.FileStoreKeyChain</class>
+                <url>file:{{ $.Values.podConfig.primaryContainer.runtimePath }}/keychain</url>
+              </keychain>
+              <auth>
+                <realm>com.tc.net.core.security.ShiroIniRealm</realm>
+                <url>file:{{ $.Values.podConfig.primaryContainer.runtimePath }}/terracotta.ini</url>
+                <user>user</user>
+              </auth>
+                <management>
+                  <ia> https://tmc-0.tmc-service.{{ $.Release.Namespace }}.svc.cluster.local:9443/tmc/api/assertIdentity</ia>
+                  <timeout>10000</timeout>
+                  <hostname>{{ include "terracotta-bigmemorymax.fullname" $ }}-{{ add (mul $i $.Values.podConfig.primaryContainer.nodeCountPerStripe) $j }}.{{ include "terracotta-bigmemorymax.fullname" $ }}-h.{{ $.Release.Namespace }}.svc.cluster.local</hostname >
+                </management>
+            </security>
+            {{- end }}
+          </server>
+    {{- end }}
+        </mirror-group>
+    {{- end }}
+        <restartable enabled={{ .Values.podConfig.primaryContainer.restartable | quote }}/>
+      </servers>
+    </tc:tc-config>
+{{- $fileName := printf "%s/%s" (tpl .Values.environment . ) "licenses/terracotta-license.key" }}
+  {{ $fileName | base}}: |-
+{{ .Files.Get $fileName | indent 4 }}
