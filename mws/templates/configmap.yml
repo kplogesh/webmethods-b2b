@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mws.fullname" . }}
+  labels:
+    {{- include "mws.labels" . | nindent 4 }}
+data:
+  DB_TYPE: sqlserver 
+  DB_URL: jdbc:wm:sqlserver://mssql-deployment.rdbms:1433;databaseName=devmws
+{{- $fileName := printf "%s/%s" (tpl .Values.environment . ) "application/wsclient.global.xml" }}
+  {{ $fileName | base}}: |-
+{{ .Files.Get $fileName | indent 4 }}

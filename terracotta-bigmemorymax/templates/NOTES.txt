@@ -1,6 +1,6 @@
 TSA URLs: 
 {{- range $i := until (int $.Values.podConfig.primaryContainer.stripeCount) }}
 {{- range $j := until (int $.Values.podConfig.primaryContainer.nodeCountPerStripe) }}
-{{ include "terracotta-bigmemorymax.fullname" $ }}-{{ add (mul $i $.Values.nodeCountPerStripe) $j }}.{{ include "terracotta-bigmemorymax.fullname" $ }}-h.{{ $.Release.Namespace }}.svc.cluster.local:{{ $.Values.service.serverPort }}
+{{ include "terracotta-bigmemorymax.fullname" $ }}-{{ add (mul $i $.Values.nodeCountPerStripe) $j }}.{{ include "terracotta-bigmemorymax.fullname" $ }}-h.{{ $.Release.Namespace }}.svc.cluster.local:{{ $.Values.service.serverPort | default 9510}}
 {{- end }}
 {{- end }}

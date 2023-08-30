@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mws.fullname" . }}
+  labels:
+    {{- include "mws.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "mws.selectorLabels" . | nindent 4 }}
+  ports:
+{{ toYaml .Values.nodePortDef | indent 4 }}    
+  type: {{ .Values.service.type }}
+  {{- if not .Values.service.sessionAffinity.enabled }}
+  sessionAffinity: ClientIP
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mws.fullname" . }}-h
+  labels:
+    {{- include "mws.labels" . | nindent 4 }}
+  {{- with .Values.serviceAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    {{- include "mws.selectorLabels" . | nindent 4 }}
+  ports:
+{{ toYaml .Values.headlessPortDef | indent 4 }}  
+  clusterIP: None

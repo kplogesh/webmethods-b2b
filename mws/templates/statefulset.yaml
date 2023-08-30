@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: 
+  name: {{ include "mws.fullname" . }}
+  labels:
+    {{- include "mws.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "mws.fullname" . }}-h
+  selector:
+    matchLabels:
+      {{- include "mws.selectorLabels" . | nindent 6 }}
+  {{- if not .Values.podConfig.autoScaling.enabled }}
+  replicas: {{ .Values.podConfig.replicas }}
+  {{- end }}
+  podManagementPolicy: {{ .Values.podConfig.podManagementPolicy }}
+  updateStrategy:
+    rollingUpdate:
+      partition: {{ .Values.podConfig.partition }}
+    type: {{ .Values.podConfig.updateStrategy }}
+  template:
+    metadata:
+      labels:
+        {{- include "mws.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.podConfig.affinity }}   
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}      
+      {{- with .Values.podConfig.tolerations }}                           
+      tolerations:
+        {{- toYaml . | nindent 8 }}    
+      {{- end }} 
+      securityContext:
+        {{- toYaml .Values.podConfig.podSecurityContext | nindent 8 }} 
+      serviceAccountName: {{ .Values.podConfig.serviceAccountName }}
+      containers:          
+        - name: {{ include "mws.fullname" . }}-primary-container
+          image: "{{ .Values.podConfig.primaryContainer.image.repository }}:{{ .Values.podConfig.primaryContainer.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.podConfig.primaryContainer.image.pullPolicy }}
+          {{- with .Values.podConfig.primaryContainer.lifecycle }} 
+          lifecycle:
+            {{- toYaml . | nindent 12 }}  
+          {{- end }}
+        # Resources required for the MSR to function. CPUs and Memory configurations.
+          resources:
+            {{- toYaml .Values.podConfig.primaryContainer.resources | nindent 12 }} 
+          {{- with .Values.podConfig.primaryContainer.env }} 
+          env:
+            {{- toYaml . | nindent 12 }} 
+          {{- end }}
+          ports:
+            {{- toYaml .Values.podConfig.primaryContainer.ports | nindent 12 }} 
+          {{- with .Values.podConfig.primaryContainer.livenessProbe }}
+          livenessProbe:           
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.podConfig.primaryContainer.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.podConfig.primaryContainer.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}                
+          volumeMounts:
+            - mountPath: {{ .Values.podConfig.primaryContainer.mwsVolumesPath }}
+              name: diskstore
+            - mountPath: {{ .Values.podConfig.primaryContainer.wsclientGlobalPath }}
+              subPath: {{ .Values.podConfig.primaryContainer.wsclientGlobalFileName }}
+              name: config
+      imagePullSecrets:
+        - name: {{ .Values.podConfig.imagePullSecrets }}   
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "mws.fullname" . }}
+  volumeClaimTemplates:
+  - metadata:
+      name: diskstore
+      labels:
+        type: mws-store
+    spec:
+      accessModes: 
+      - {{ .Values.podConfig.diskAccessMode }} 
+      storageClassName: {{ .Values.podConfig.storageClassName }} 
+      resources:
+        requests:
+          storage: {{ .Values.podConfig.diskStorage }}             

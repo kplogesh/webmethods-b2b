@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<CONFIG>
+	<runtime_config appName="__global__">
+		<enventries>
+			<entry ftype="java.lang.Boolean" fvalue="true" key="wsclient.global.basicauth-enabled" />
+			<entry ftype="java.lang.String" fvalue="Administrator" key="wsclient.global.basicauth-username" />
+			<entry ftype="java.lang.String" fvalue="manage" key="wsclient.global.basicauth-password" />
+		</enventries>
+	</runtime_config>
+</CONFIG>

@@ -28,7 +28,7 @@ podConfig:
       value: "b2b"
       effect: "NoSchedule" 
   # Options for node affinity for pod placement is required | preferred. Whether affinity is required or not is decided by setNodeAffinity parameter that can be set to true | false
-  affinity: 
+  affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
@@ -50,15 +50,18 @@ podConfig:
   appName: b2b
   # Persistent Volume Claim
   PersistentVolumeClaimName: b2b-nfs-storage
-
+  diskAccessMode: ReadWriteOnce
+  storageClassName: local-path
+  diskStorage: 2Gi
   # Secrets
   secretName: b2b-secrets
+
   # Secret to be used to pull the image from repository
   imagePullSecrets: regcred
   # Container configurations residing in a pod
   primaryContainer:
     image: 
-      repository: wmmsrtn
+      repository: mws
       tag: "10.15.0" 
       pullPolicy: IfNotPresent
     # Resources required for the apigateway to function. CPUs and Memory configurations.
@@ -70,16 +73,32 @@ podConfig:
         cpu: 1
         memory: "4G" 
     env:
-      - name: JAVA_MIN_MEM
-        value: "1024M"
-      - name: JAVA_MAX_MEM
-        value: "2048M"        
-      - name: LD_LIBRARY_PATH
-        value: "/opt/softwareag/IntegrationServer/lib"
+      - name: DB_USERNAME
+        valueFrom:
+          secretKeyRef: 
+            name: b2b-secrets
+            key: DB_MWS_USER
+      - name: DB_PASSWORD
+        valueFrom:
+          secretKeyRef: 
+            name:  b2b-secrets
+            key: DB_MWS_PASSWORD
+      - name: DB_TYPE
+        valueFrom:
+          configMapKeyRef: 
+            name:  mws
+            key: DB_TYPE        
+      - name: DB_URL
+        valueFrom:
+          configMapKeyRef: 
+            name:  mws
+            key: DB_URL
+      - name: NODE_NAME
+        value: mws
     ports:
-      - containerPort: 5555
+      - containerPort: 8585
         name: http
-      - containerPort: 5543
+      - containerPort: 8586
         name: https
     # Liveness probe to check whether container is active. Restart happens when liveness probe fails.
     livenessProbe:
@@ -89,11 +108,11 @@ podConfig:
       periodSeconds: 20
       successThreshold: 1
       tcpSocket:
-        port: 5555
+        port: 8585
     # Readiness probe to check whether container is ready. Restart happens when readiness probe fails.
     readinessProbe:
       tcpSocket:
-        port: 5555
+        port: 8585
       timeoutSeconds: 5
       initialDelaySeconds: 60
       failureThreshold: 5
@@ -102,63 +121,39 @@ podConfig:
     # Startup probe for the application to be ready. Pauses readiness/liveness probe till startup is successful
     startupProbe:
       tcpSocket:
-        port: 5555
+        port: 8585
       failureThreshold: 20
       periodSeconds: 20
     # Volume mount required for the application to function
-    msrLicensePath: /opt/softwareag/IntegrationServer/bin/../config/licenseKey.xml
-    msrLicenseFileName: msr-licenseKey.xml
-    tcLicensePath: /opt/softwareag/common/conf/terracotta-license.key
-    tcLicenseFileName: terracotta-license.key
-    applicationPropertiesPath: /opt/softwareag/IntegrationServer/application.properties
-    applicationPropertiesFileName: application.properties
-    ediintPropertiesPath: /opt/softwareag/IntegrationServer/packages/WmEDIINT/config/properties.cnf
-    ediintFileName: ediint-properties.cnf
-    nfsPath: /b2bdir/demo
-    containerPath: /b2bdir
-    secretsPath: /etc/secrets
+    mwsVolumesPath: /opt/mws/MWS/volumes
+
     # PostStart command execution
-    lifecycle:
-      postStart:
-        exec:
-          command:
-            - /bin/sh
-            - -c
-            - |
-              sed -i 's/notateit/sapgw10s/g' /etc/services
-              mkdir -p /b2bdir/demo/platinum
-              mkdir -p /b2bdir/demo/platinum/work
-              mkdir -p /b2bdir/demo/platinum/error
-              mkdir -p /b2bdir/demo/platinum/done
-      preStop:
-        exec:
-          command:
-            - /bin/sh
-            - -c
-            - sleep 50
+    lifecycle: []
+    wsclientGlobalFileName: wsclient.global.xml
+    wsclientGlobalPath: /opt/mws/MWS/volumes/configs/asset_cfg/wsclient.global.xml
 # Pod configuration ends here.
 
 #Service definition
 service:
   type: NodePort
   # Ingress routing port
-  port: 5555
+  port: 8585
   sessionAffinity:
     enabled: true
 serviceAnnotations:
   prometheus.io/scrape: 'true'    
-  prometheus.io/port: '5555'
+  prometheus.io/port: '8585'
 nodePortDef:
-    - port: 5555
+    - port: 8585
       name: http-server
-      targetPort: 5555
-    - port: 5543
+      targetPort: 8585
+    - port: 8586
       name: https-server
-      targetPort: 5543
+      targetPort: 8586
 headlessPortDef:
-    - port: 5555
+    - port: 8585
       name: http-server
-      targetPort: 5555
-    - port: 5543
+      targetPort: 8585
+    - port: 8586
       name: https-server
-      targetPort: 5543
+      targetPort: 8586
