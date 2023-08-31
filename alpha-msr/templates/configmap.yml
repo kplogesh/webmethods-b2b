@@ -5,15 +5,34 @@ metadata:
   labels:
     {{- include "microservices-runtime.labels" . | nindent 4 }}
 data:
-{{- $fileName := printf "%s/%s" (tpl .Values.environment . ) "application/application.properties" }}
+{{- $fileName := printf "%s/%s/%s" (tpl .Values.environment . ) "application" (tpl .Values.podConfig.primaryContainer.applicationPropertiesFileName . ) }}
   {{ $fileName | base}}: |-
 {{ .Files.Get $fileName | indent 4 }}
-{{- $fileName := printf "%s/%s" (tpl .Values.environment . ) "application/ediint-properties.cnf" }}
+{{- $fileName := printf "%s/%s/%s" (tpl .Values.environment . ) "application" (tpl .Values.podConfig.primaryContainer.ediintFileName . ) }}
   {{ $fileName | base}}: |-
 {{ .Files.Get $fileName | indent 4 }}
-{{- $fileName := printf "%s/%s" (tpl .Values.environment . ) "licenses/msr-licenseKey.xml" }}
+{{- $fileName := printf "%s/%s/%s" (tpl .Values.environment . ) "licenses" (tpl .Values.podConfig.primaryContainer.msrLicenseFileName . ) }}
   {{ $fileName | base}}: |-
 {{ .Files.Get $fileName | indent 4 }}
-{{- $fileName := printf "%s/%s" (tpl .Values.environment . ) "licenses/terracotta-license.key" }}
+{{- $fileName := printf "%s/%s/%s" (tpl .Values.environment . ) "licenses" (tpl .Values.podConfig.primaryContainer.tcLicenseFileName . ) }}
   {{ $fileName | base}}: |-
-{{ .Files.Get $fileName | indent 4 }}      
+{{ .Files.Get $fileName | indent 4 }}   
+  {{- if .Values.podConfig.dependencies.enabled }}   
+  dependency.sh: |-
+    echo "Validating the dependent connections!"
+
+    while [ $(timeout 1 sh -c "</dev/tcp/{{ .Values.podConfig.dependencies.um.serviceName }}/{{ .Values.podConfig.dependencies.um.servicePort }}" && echo 0 || echo 1 ) -ne 0 ]; do
+      echo "Waiting for the {{ .Values.podConfig.dependencies.um.serviceName }} service availability..."
+      sleep 5;
+    done
+    echo "Connection to {{ .Values.podConfig.dependencies.um.serviceName }} is available..."
+
+    while [ $(timeout 1 sh -c "</dev/tcp/{{ .Values.podConfig.dependencies.terracottaBigmemoryMax.serviceName }}/{{ .Values.podConfig.dependencies.terracottaBigmemoryMax.servicePort }}" && echo 0 || echo 1 ) -ne 0 ]; do
+      echo "Waiting for the {{ .Values.podConfig.dependencies.terracottaBigmemoryMax.serviceName }} service availability..."
+      sleep 5;
+    done
+
+    echo "Connection to {{ .Values.podConfig.dependencies.terracottaBigmemoryMax.serviceName }} is available..."
+
+    echo "Initialization Completed!"
+  {{- end }}

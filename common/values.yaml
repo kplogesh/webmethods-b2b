@@ -13,9 +13,9 @@ serviceAccount:
   name: "b2b-sa"
 
 # Persistent Volume Claim
-PersistentVolumeClaimName: b2b-nfs-storage
+persistentVolumeClaimName: b2b-nfs-storage
  
-PersistentVolumeClaim:
+persistentVolumeClaim:
   storageClassName: local-path
   accessModes:
     - ReadWriteOnce

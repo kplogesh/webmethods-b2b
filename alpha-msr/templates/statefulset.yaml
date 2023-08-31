@@ -33,6 +33,19 @@ spec:
       securityContext:
         {{- toYaml .Values.podConfig.podSecurityContext | nindent 8 }} 
       serviceAccountName: {{ .Values.podConfig.serviceAccountName }}
+      {{- if .Values.podConfig.dependencies.enabled }} 
+      initContainers:
+        - name: {{ include "microservices-runtime.fullname" . }}-init-container
+          image: "{{ .Values.podConfig.initContainer.image.repository }}:{{ .Values.podConfig.initContainer.image.tag }}"
+          imagePullPolicy: {{ .Values.podConfig.initContainer.image.pullPolicy }}
+          command: ['sh', '-c', "{{ .Values.podConfig.initContainer.containerPath }}/dependency.sh"]
+          volumeMounts:
+            - mountPath: {{ .Values.podConfig.initContainer.containerPath }}
+              name: create-dir
+            - name: application-config
+              mountPath: {{ .Values.podConfig.initContainer.containerPath }}/dependency.sh
+              subPath: dependency.sh
+      {{- end }}
       containers:          
         - name: {{ include "microservices-runtime.fullname" . }}-primary-container
           image: "{{ .Values.podConfig.primaryContainer.image.repository }}:{{ .Values.podConfig.primaryContainer.image.tag | default .Chart.AppVersion }}"
@@ -74,7 +87,7 @@ spec:
               subPath: {{ .Values.podConfig.primaryContainer.applicationPropertiesFileName }} 
             - name: application-config
               mountPath: {{ .Values.podConfig.primaryContainer.ediintPropertiesPath }} 
-              subPath: {{ .Values.podConfig.primaryContainer.ediintFileName }} 
+              subPath: {{ .Values.podConfig.primaryContainer.ediintFileName }}
             - mountPath: {{ .Values.podConfig.primaryContainer.containerPath }}
               name: create-dir  
             - name: b2b-nfs-directory   
@@ -88,9 +101,10 @@ spec:
       - name: application-config
         configMap:
           name: {{ include "microservices-runtime.fullname" . }}
+          defaultMode: 0777
       - name: b2b-nfs-directory
         persistentVolumeClaim:
-          claimName: {{ .Values.podConfig.PersistentVolumeClaimName }}
+          claimName: {{ .Values.podConfig.persistentVolumeClaimName }}
       - name: secret-volume
         secret:
           secretName: {{ .Values.podConfig.secretName }}

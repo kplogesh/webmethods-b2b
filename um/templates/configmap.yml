@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "um-runtime.fullname" . }}
+  labels:
+    {{- include "um-runtime.labels" . | nindent 4 }}
+data:
+{{- $fileName := printf "%s/%s/%s" (tpl .Values.environment . ) "licenses" (tpl .Values.podConfig.primaryContainer.umLicenseFileName . ) }}
+  {{ $fileName | base}}: |-
+{{ .Files.Get $fileName | indent 4 }}

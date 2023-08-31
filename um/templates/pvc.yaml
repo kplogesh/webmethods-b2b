@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "um-runtime.fullname" . }}
+  labels:
+    app: b2b
+spec:
+{{ toYaml .Values.podConfig.persistentVolumeClaim | indent 2 }}

@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ .Values.PersistentVolumeClaimName }}
+  name: {{ .Values.persistentVolumeClaimName }}
   labels:
-    app: b2b
+    {{- include "common.labels" . | nindent 4 }}
 spec:
-{{ toYaml .Values.PersistentVolumeClaim | indent 2 }}
+{{ toYaml .Values.persistentVolumeClaim | indent 2 }}

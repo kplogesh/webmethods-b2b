@@ -1,0 +1,137 @@
+---
+fullnameOverride: ""
+nameOverride: ""
+environment: dev
+
+ingress:
+  enabled: false
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: daeigcs04241.eur.ad.sag
+      paths: []
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+podConfig: 
+  autoScaling: 
+    enabled: false 
+    minReplicas: 1
+    maxReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 25%
+    type: RollingUpdate
+  tolerations: 
+    - key: "app"
+      operator: "Equal"
+      value: "b2b"
+      effect: "NoSchedule" 
+  # Options for node affinity for pod placement is required | preferred. Whether affinity is required or not is decided by setNodeAffinity parameter that can be set to true | false
+  affinity: 
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - "b2b" 
+  #securityConext values
+  podSecurityContext:
+    fsGroup: 1724
+    runAsUser: 1724
+  # Service account name
+  serviceAccountName: b2b-sa
+  replicas: 1
+  updateStrategy: RollingUpdate
+  partition: 0
+  appName: b2b
+  # Persistent Volume Claim
+  persistentVolumeClaim:
+    storageClassName: local-path
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 2Gi
+
+  # Secrets
+  secretName: b2b-secrets
+  # Secret to be used to pull the image from repository
+  imagePullSecrets: regcred
+  # Container configurations residing in a pod
+  primaryContainer:
+    image: 
+      repository: sagcr.azurecr.io/universalmessaging-server
+      tag: "10.15" 
+      pullPolicy: IfNotPresent
+    # Resources required for the apigateway to function. CPUs and Memory configurations.
+    resources:
+      limits:
+        cpu: 1
+        memory: "2G"
+      requests:
+        cpu: 1
+        memory: "2G" 
+    env:
+      - name: REALM_NAME
+        value: umserver
+      - name: INIT_JAVA_MEM_SIZE 
+        value: "1024"
+      - name: MAX_JAVA_MEM_SIZE 
+        value: "2048"
+    ports:
+      - containerPort: 9000
+        name: nsp
+    # Liveness probe to check whether container is active. Restart happens when liveness probe fails.
+    livenessProbe:
+      timeoutSeconds: 5
+      initialDelaySeconds: 60
+      failureThreshold: 5
+      periodSeconds: 20
+      successThreshold: 1
+      tcpSocket:
+        port: 9000
+    # Readiness probe to check whether container is ready. Restart happens when readiness probe fails.
+    readinessProbe:
+      tcpSocket:
+        port: 9000
+      timeoutSeconds: 5
+      initialDelaySeconds: 60
+      failureThreshold: 5
+      periodSeconds: 20
+      successThreshold: 1
+    # Startup probe for the application to be ready. Pauses readiness/liveness probe till startup is successful
+    startupProbe: []
+    # Volume mount required for the application to function
+    umLicensePath: /opt/softwareag/UniversalMessaging/server/umserver/licence/licence.xml
+    umLicenseFileName: um-license.xml
+    dataDirPath: /opt/softwareag/UniversalMessaging/server/umserver/data
+    secretsPath: /etc/secrets
+    # PostStart command execution
+    lifecycle: []
+# Pod configuration ends here.
+
+#Service definition
+service:
+  type: NodePort
+  # Ingress routing port
+  port: 9000
+  sessionAffinity:
+    enabled: false
+serviceAnnotations:
+  prometheus.io/scrape: 'true'    
+  prometheus.io/port: '9200'
+nodePortDef:
+    - port: 9000
+      name: nsp
+      targetPort: 9000
+    - port: 9200
+      name: http
+      targetPort: 9200

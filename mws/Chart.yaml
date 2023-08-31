@@ -2,4 +2,4 @@ apiVersion: v1
 description: Official chart for MSR
 name: mws
 version: "10.15"
-appVersion: "1.0.0"
+appVersion: "10.15"

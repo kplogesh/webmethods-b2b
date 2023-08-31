@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "um-runtime.fullname" . }}
+  labels:
+    {{- include "um-runtime.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "um-runtime.selectorLabels" . | nindent 4 }}
+  ports:
+{{ toYaml .Values.nodePortDef | indent 4 }}    
+  type: {{ .Values.service.type }}
+  {{- if not .Values.service.sessionAffinity.enabled }}
+  sessionAffinity: ClientIP
+  {{- end }}

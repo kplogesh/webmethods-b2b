@@ -16,6 +16,14 @@ ingress:
   #    hosts:
   #      - chart-example.local
 podConfig: 
+  dependencies:
+    enabled: true
+    um:
+      serviceName: messaging-um
+      servicePort: 9000
+    terracottaBigmemoryMax:
+      serviceName: terracotta-bigmemorymax-0.terracotta-bigmemorymax-h
+      servicePort: 9510
   autoScaling: 
     enabled: false 
     minReplicas: 1
@@ -49,13 +57,19 @@ podConfig:
   partition: 0
   appName: b2b
   # Persistent Volume Claim
-  PersistentVolumeClaimName: b2b-nfs-storage
+  persistentVolumeClaimName: b2b-nfs-storage
 
   # Secrets
   secretName: b2b-secrets
   # Secret to be used to pull the image from repository
   imagePullSecrets: regcred
   # Container configurations residing in a pod
+  initContainer:
+    image: 
+      repository: redhat/ubi8
+      tag: "latest" 
+      pullPolicy: IfNotPresent
+    containerPath: /dependency
   primaryContainer:
     image: 
       repository: wmmsrtn
@@ -107,7 +121,7 @@ podConfig:
       periodSeconds: 20
     # Volume mount required for the application to function
     msrLicensePath: /opt/softwareag/IntegrationServer/bin/../config/licenseKey.xml
-    msrLicenseFileName: msr-licenseKey.xml
+    msrLicenseFileName: msr-license.xml
     tcLicensePath: /opt/softwareag/common/conf/terracotta-license.key
     tcLicenseFileName: terracotta-license.key
     applicationPropertiesPath: /opt/softwareag/IntegrationServer/application.properties
