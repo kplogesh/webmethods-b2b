@@ -1,0 +1,60 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "microservices-runtime.fullname" . }}-job  
+spec:
+  backoffLimit: {{ .Values.jobForTNDBAssets.backoffLimit }}
+  completions: {{ .Values.jobForTNDBAssets.completions }}
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false" 
+    spec:
+      restartPolicy: {{ .Values.jobForTNDBAssets.podConfig.restartPolicy }}
+      containers:
+      - name: {{ include "microservices-runtime.fullname" . }}-job-primaryContainer
+        image: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.image.repository }}:{{ .Values.jobForTNDBAssets.podConfig.primaryContainer.image.tag }}
+        command: 
+        - "sh"
+        - "-c"
+        - |
+          mkdir -p /opt/softwareag/install/bin
+          cd {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.containerPath }}
+          chmod 755 import.sh
+          ./import.sh
+        volumeMounts:
+          - mountPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.containerPath }}
+            name: create-dir
+          - mountPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.containerPath }}/import.sh
+            name: job-config
+            subPath: import.sh
+          - name: job-config
+            mountPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.msrLicensePath }}
+            subPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.msrLicenseFileName }}
+          - name: job-config
+            mountPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.applicationPropertiesPath }}
+            subPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.applicationPropertiesFileName }}
+          - name: job-config 
+            mountPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.cpFilePath }}
+            subPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.cpFileName }}      
+          - name: job-config  
+            mountPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.envFilePath }}
+            subPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.envFileName }}       
+          - name: job-config 
+            mountPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.fullAssetFilePath }}
+            subPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.fullAssetFileName }}   
+          - name: job-config 
+            mountPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.configFilePath }}
+            subPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.configFileName }}
+          - name: secret-volume 
+            mountPath: /etc/secrets
+            readOnly: true                                                 
+      volumes:
+        - name: create-dir
+          emptyDir: {}
+        - name: job-config
+          configMap:
+            name: {{ include "microservices-runtime.fullname" . }}-job
+        - name: secret-volume
+          secret:
+            secretName: {{ .Values.jobForTNDBAssets.podConfig.secretName }}    

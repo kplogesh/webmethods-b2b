@@ -151,7 +151,6 @@ podConfig:
             - -c
             - sleep 50
 # Pod configuration ends here.
-
 #Service definition
 service:
   type: NodePort
@@ -176,3 +175,72 @@ headlessPortDef:
     - port: 5543
       name: https-server
       targetPort: 5543
+# Job Configurations
+jobForTNDBAssets:
+  enabled: true
+  backoffLimit: 15
+  completions: 1
+  podConfig: 
+    restartPolicy: Never
+    tolerations: 
+      - key: "app"
+        operator: "Equal"
+        value: "b2b"
+        effect: "NoSchedule" 
+    # Options for node affinity for pod placement is required | preferred. Whether affinity is required or not is decided by setNodeAffinity parameter that can be set to true | false
+    affinity: 
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - "b2b" 
+    #securityConext values
+    podSecurityContext:
+      fsGroup: 1724
+      runAsUser: 1724
+    # Service account name
+    serviceAccountName: b2b-sa
+    appName: b2b
+    # Secrets
+    secretName: b2b-secrets
+    # Secret to be used to pull the image from repository
+    imagePullSecrets: regcred
+    # Container configurations residing in a pod
+    primaryContainer:
+      image: 
+        repository: wmmsrtn
+        tag: "10.15.0" 
+        pullPolicy: IfNotPresent
+      env:
+        - name: JAVA_MIN_MEM
+          value: "1024M"
+        - name: JAVA_MAX_MEM
+          value: "2048M"        
+      ports:
+        - containerPort: 5555
+          name: http
+        - containerPort: 5543
+          name: https
+      # Volume mount required for the application to function
+      msrLicensePath: /opt/softwareag/IntegrationServer/bin/../config/licenseKey.xml
+      msrLicenseFileName: msr-license.xml
+      applicationPropertiesPath: /opt/softwareag/IntegrationServer/application.properties
+      applicationPropertiesFileName: application.properties
+      cpFilePath: /opt/softwareag/IntegrationServer/packages/WmTN/bin/setcp.sh
+      cpFileName: setcp.sh
+      envFilePath: /opt/softwareag/install/bin/setenv.sh
+      envFileName: setenv.sh
+      tnImportConfig:
+        type: full
+        configFilePath: /opt/softwareag/IntegrationServer/packages/WmTN/bin/TNImport.xml
+        configFileName: TNImport.xml
+        fullAssetFilePath: /opt/softwareag/IntegrationServer/packages/WmTN/bin/ExportedData-Full.bin
+        fullAssetFileName: ExportedData-Full.bin
+        partialAssetFilePath: /opt/softwareag/IntegrationServer/packages/WmTN/bin/ExportedData-Partial.bin
+        partialAssetFileName: ExportedData-Partial.bin
+      containerPath: /scripts
+      secretsPath: /etc/secrets
+  # Pod configuration ends here.
