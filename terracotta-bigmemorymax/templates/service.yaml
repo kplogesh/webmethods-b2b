@@ -3,14 +3,13 @@ kind: Service
 metadata:
   name: {{ include "terracotta-bigmemorymax.fullname" . }}-h
   labels:
-    app: {{ include "terracotta-bigmemorymax.fullname" . }}
+    {{- include "terracotta-bigmemorymax.labels" . | nindent 8 }}
   annotations:
     prometheus.io/scrape: 'true'    
     prometheus.io/port: '5555'
 spec:
   selector:
-    app: {{ include "terracotta-bigmemorymax.fullname" . }}
-    component: caching
+    {{- include "terracotta-bigmemorymax.selectorLabels" . | nindent 4 }}
   ports:
 {{ toYaml .Values.headlessPortDef | indent 4 }}  
   clusterIP: None
