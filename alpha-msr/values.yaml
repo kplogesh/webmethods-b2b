@@ -182,6 +182,9 @@ jobForTNDBAssets:
   completions: 1
   podConfig: 
     restartPolicy: Never
+    annotations:
+      sidecar.istio.io/inject: "false"
+      "helm.sh/hook": pre-install
     tolerations: 
       - key: "app"
         operator: "Equal"
@@ -228,19 +231,20 @@ jobForTNDBAssets:
       msrLicensePath: /opt/softwareag/IntegrationServer/bin/../config/licenseKey.xml
       msrLicenseFileName: msr-license.xml
       applicationPropertiesPath: /opt/softwareag/IntegrationServer/application.properties
-      applicationPropertiesFileName: application.properties
+      applicationPropertiesFileName: job-application.properties
       cpFilePath: /opt/softwareag/IntegrationServer/packages/WmTN/bin/setcp.sh
       cpFileName: setcp.sh
       envFilePath: /opt/softwareag/install/bin/setenv.sh
       envFileName: setenv.sh
       tnImportConfig:
+        # type options - full|partial
         type: full
         configFilePath: /opt/softwareag/IntegrationServer/packages/WmTN/bin/TNImport.xml
         configFileName: TNImport.xml
-        fullAssetFilePath: /opt/softwareag/IntegrationServer/packages/WmTN/bin/ExportedData-Full.bin
-        fullAssetFileName: ExportedData-Full.bin
-        partialAssetFilePath: /opt/softwareag/IntegrationServer/packages/WmTN/bin/ExportedData-Partial.bin
-        partialAssetFileName: ExportedData-Partial.bin
+        fullAssetFilePath: /opt/softwareag/IntegrationServer/packages/WmTN/bin/fullExportedData.bin
+        fullAssetFileName: fullExportedData.bin
+        partialAssetFilePath: /opt/softwareag/IntegrationServer/packages/WmTN/bin/partialExportedData.bin
+        partialAssetFileName: partialExportedData.bin
       containerPath: /scripts
       secretsPath: /etc/secrets
   # Pod configuration ends here.

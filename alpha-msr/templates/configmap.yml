@@ -36,3 +36,162 @@ data:
 
     echo "Initialization Completed!"
   {{- end }}
+---
+{{- if .Values.jobForTNDBAssets.enabled }} 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "microservices-runtime.fullname" . }}-job
+  labels:
+    {{- include "microservices-runtime.labels" . | nindent 4 }}
+  {{- with .Values.jobForTNDBAssets.podConfig.annotations }} 
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+{{- $fileName := printf "%s/%s/%s/%s" (tpl .Values.environment . ) "application" "dbassets"  (tpl .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.configFileName . ) }}
+  {{ $fileName | base }}: |-
+{{ .Files.Get $fileName | indent 4 }}
+{{- $fileName := printf "%s/%s/%s" (tpl .Values.environment . ) "licenses" (tpl .Values.jobForTNDBAssets.podConfig.primaryContainer.msrLicenseFileName . ) }}
+  {{ $fileName | base}}: |-
+{{ .Files.Get $fileName | indent 4 }}
+{{- $fileName := printf "%s/%s/%s" (tpl .Values.environment . ) "application" (tpl .Values.jobForTNDBAssets.podConfig.primaryContainer.applicationPropertiesFileName . ) }}
+  {{ $fileName | base}}: |-
+{{ .Files.Get $fileName | indent 4 }}
+  import.sh: |-
+    #!/bin/bash
+    # Initiate the startup for MSR to effect the JDBC pools
+    /opt/softwareag/IntegrationServer/bin/startup.sh
+    # Wait for MSR to come up
+    while [ $(curl -sw '%{http_code}' "http://localhost:5555/health/liveness" -o /dev/null) -ne 200 ]; do
+      echo "Waiting for the server startup..."
+      sleep 2;
+    done     
+    echo "Server is up and running"
+    # When MSR is active, initiate the import process
+    cd /opt/softwareag/IntegrationServer/packages/WmTN/bin    
+
+    # Execute the TN import command to effect the new assets
+    ./tnimport.sh -file {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.configFileName }}
+
+    # curl -u Administrator:manage --location 'http://localhost:5555/invoke/wm.tn.admin:extendedImportData?replaceRuleList=true&all=true&type=bin&force=true&importDataFileName=%2Fopt%2Fsoftwareag%2FIntegrationServer%2Fpackages%2FWmTN%2Fbin%2F{{ .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.fullAssetFileName }}' --header 'Content-Type: application/json' --header 'Accept: application/json'
+    # Improvise this section to read password from secret-----
+    # When startup is complete, initiate the shutdown sequence
+    /opt/softwareag/IntegrationServer/bin/shutdown.sh 
+  setcp.sh: |-
+    #!/bin/sh
+    #
+    # Copyright (c) 1996-2007, webMethods Inc.  All Rights Reserved.
+    # setcp.bat: Set CLASSPATH to run TN utils.  This file is called
+    # by the other batch scripts in this directory to configure the
+    # environment for connecting to the TN data store.
+    #
+    # Change SERVDIR and JDKDIR to reflect their locations on your system
+    #
+
+    # --- LOCATION OF WEBMETHODS B2B SERVER ---
+    DIRNAME=`pwd`
+
+    INSTANCEDIR=`cd "$DIRNAME/../../.."; pwd`
+    INSTALLDIR=`cd "$DIRNAME/../../../.."; pwd`
+    SERVDIR=${INSTALLDIR}/IntegrationServer
+    COMMONDIR=${INSTALLDIR}/common
+
+    . ${INSTALLDIR}/install/bin/setenv.sh
+
+    #--LOCATION OF COMMON LIB JARS--
+    WEBMEXT=${COMMONDIR}/lib/ext
+
+    # ================================================================
+    # IF YOU WOULD LIKE TO ADD YOUR OWN FILES TO THE CLASSPATH
+    # THEN SET THE FOLLOWING LINE TO CONTAIN YOUR CLASSPATH ADDITIONS
+    #         Example:  SET ADDCLASSES=C:\myclasses\joe.jar
+    # ================================================================
+    ADDCLASSES=
+
+    # --- SET THE FOLLOWING LINE TO "java" AND MODIFY JDKDIR TO POINT ---
+    # --- TO YOUR SUN JDK TO RUN WITH Java 1.2                        ---
+    JDKDIR=${JRE_HOME}
+
+    SSL_DIR=${WEBMEXT}
+
+    SSL_PATH=${SSL_DIR}/enttoolkit.jar
+
+    # --- UPDATE PATH AND SET INITIAL CLASSPATH ---
+    PATH=${PATH}:${SERVDIR}/bin:${SERVDIR}/packages/WmTN/bin:${JDKDIR}/bin
+    CLASSPATH=${SERVDIR}/lib/classes:${SERVDIR}/lib/wm-isserver.jar:${COMMONDIR}/lib/wm-isclient.jar:${COMMONDIR}/lib/wm-scg-audit.jar:${COMMONDIR}/lib/wm-g11nutils.jar:${COMMONDIR}/lib/wm-scg-security.jar:${COMMONDIR}/lib/wm-scg-core.jar:${COMMONDIR}/lib/wm-acdl-common.jar:${COMMONDIR}/lib/ext/jdom.jar:${COMMONDIR}/lib/glassfish/gf.jakarta.mail.jar:${WEBMEXT}/icu4j.jar:${WEBMEXT}/dd-cjdbc.jar:${SERVDIR}/lib/server.zip:.:${SERVDIR}/lib/jdk11x_update.jar:${JDKDIR}/lib/rt.jar:${JDKDIR}/lib/i18n.jar:${SERVDIR}/lib/classes:${ADDCLASSES}:${SSL_PATH}:${COMMONDIR}/lib/ehcache-ee.jar:${COMMONDIR}/lib/terracotta-toolkit-runtime-ee.jar:${COMMONDIR}/lib/ext/slf4j-api.jar:${COMMONDIR}/lib/ext/slf4j-log4j.jar:${COMMONDIR}/lib/ext/log4j.jar:${COMMONDIR}/lib/ext/commons-codec.jar:${COMMONDIR}/lib/ext/bam-jms-util.jar:${COMMONDIR}/lib/glassfish/gf.webservices-api-osgi.jar:${INSTALLDIR}/WS-Stack/lib/*:${SERVDIR}/instances/default/packages/WmFlatFile/code/jars/static/*
+
+
+    # ================================================================
+    # Update CLASSPATH to include all log4j jar and zip files in lib\ext\log4j
+    # of the B2B server
+    # ================================================================
+    if [ -d ${WEBMEXT}/log4j ]; then
+      jardir=${WEBMEXT}/log4j
+      for jar in `/bin/ls ${jardir}/*.jar ${jardir}/*.zip 2>/dev/null`
+      do
+        CLASSPATH=${CLASSPATH}:$jar
+      done
+    fi
+
+
+    # ================================================================
+    # Update CLASSPATH to include all jar and zip files in lib/jars
+    # of the B2B server
+    # ================================================================
+    if [ -d ${SERVDIR}/lib/jars ]; then
+      jardir=${SERVDIR}/lib/jars
+      for jar in `/bin/ls ${jardir}/*.jar ${jardir}/*.zip 2>/dev/null`
+      do
+        CLASSPATH=${CLASSPATH}:$jar
+      done
+    fi
+
+
+    # ================================================================
+    # Update CLASSPATH to include all jar and zip files in WmTN/code/jars
+    # ================================================================
+    if [ -d ${INSTANCEDIR}/packages/WmTN/code/jars ]; then
+      jardir=${INSTANCEDIR}/packages/WmTN/code/jars
+      for jar in `/bin/ls ${jardir}/*.jar ${jardir}/*.zip 2>/dev/null`
+      do
+        CLASSPATH=${CLASSPATH}:$jar
+      done
+    fi
+
+    # ================================================================
+    # Update CLASSPATH to include all jar and zip files in WmTN/code/jars/static
+    # ================================================================
+    if [ -d ${INSTANCEDIR}/packages/WmTN/code/jars/static ]; then
+      jardir=${INSTANCEDIR}/packages/WmTN/code/jars/static
+      for jar in `/bin/ls ${jardir}/*.jar ${jardir}/*.zip 2>/dev/null`
+      do
+        CLASSPATH=${CLASSPATH}:$jar
+      done
+    fi
+
+    # =================================================================
+    # Update CLASSPATH to include ffcore.jar, editn.jar and ediintdoc.jar for EDI documenttypes
+    # =================================================================
+    if [ -f ${INSTANCEDIR}/packages/WmFlatFile/code/jars/static/ffcore.jar ]; then
+        CLASSPATH=${CLASSPATH}:${INSTANCEDIR}/packages/WmFlatFile/code/jars/static/ffcore.jar
+    fi
+
+    if [ -f ${INSTANCEDIR}/packages/WmEDIforTN/code/jars/static/editn.jar ]; then
+        CLASSPATH=${CLASSPATH}:${INSTANCEDIR}/packages/WmEDIforTN/code/jars/static/editn.jar
+    fi
+
+    if [ -f ${INSTANCEDIR}/packages/WmEDIINT/code/jars/static/ediintdoc.jar ]; then
+        CLASSPATH=${CLASSPATH}:${INSTANCEDIR}/packages/WmEDIINT/code/jars/static/ediintdoc.jar
+    fi
+  setenv.sh: |
+    #!/bin/sh
+    JAVA_HOME=/opt/softwareag/jvm/jvm
+    export JAVA_HOME
+    JRE_HOME=/opt/softwareag/jvm/jvm
+    export JRE_HOME
+{{- $fileName := printf "%s/%s/%s/%s" (tpl .Values.environment . ) "application" "dbassets"  (tpl .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.fullAssetFileName . ) }}
+binaryData: 
+  {{ $fileName | base }}: |
+{{ .Files.Get $fileName | b64enc | indent 4 }} 
+{{- end }}

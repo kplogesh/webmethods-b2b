@@ -1,18 +1,36 @@
+{{- if .Values.jobForTNDBAssets.enabled }} 
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ include "microservices-runtime.fullname" . }}-job  
+  {{- with .Values.jobForTNDBAssets.podConfig.annotations }} 
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   backoffLimit: {{ .Values.jobForTNDBAssets.backoffLimit }}
   completions: {{ .Values.jobForTNDBAssets.completions }}
   template:
     metadata:
+      {{- with .Values.jobForTNDBAssets.podConfig.annotations }} 
       annotations:
-        sidecar.istio.io/inject: "false" 
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
+      {{- with .Values.podConfig.affinity }}   
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}      
+      {{- with .Values.podConfig.tolerations }}                           
+      tolerations:
+        {{- toYaml . | nindent 8 }}    
+      {{- end }} 
+      securityContext:
+        {{- toYaml .Values.podConfig.podSecurityContext | nindent 8 }} 
+      serviceAccountName: {{ .Values.podConfig.serviceAccountName }}
       restartPolicy: {{ .Values.jobForTNDBAssets.podConfig.restartPolicy }}
       containers:
-      - name: {{ include "microservices-runtime.fullname" . }}-job-primaryContainer
+      - name: {{ include "microservices-runtime.fullname" . }}-job-primary-container
         image: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.image.repository }}:{{ .Values.jobForTNDBAssets.podConfig.primaryContainer.image.tag }}
         command: 
         - "sh"
@@ -20,7 +38,6 @@ spec:
         - |
           mkdir -p /opt/softwareag/install/bin
           cd {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.containerPath }}
-          chmod 755 import.sh
           ./import.sh
         volumeMounts:
           - mountPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.containerPath }}
@@ -41,8 +58,13 @@ spec:
             mountPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.envFilePath }}
             subPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.envFileName }}       
           - name: job-config 
+            {{- if eq .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.type "full" }}
             mountPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.fullAssetFilePath }}
-            subPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.fullAssetFileName }}   
+            subPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.fullAssetFileName }} 
+            {{- else if eq .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.type "partial" }} 
+            mountPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.partialAssetFilePath }}
+            subPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.partialAssetFileName }} 
+            {{- end }} 
           - name: job-config 
             mountPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.configFilePath }}
             subPath: {{ .Values.jobForTNDBAssets.podConfig.primaryContainer.tnImportConfig.configFileName }}
@@ -55,6 +77,8 @@ spec:
         - name: job-config
           configMap:
             name: {{ include "microservices-runtime.fullname" . }}-job
+            defaultMode: 0777
         - name: secret-volume
           secret:
             secretName: {{ .Values.jobForTNDBAssets.podConfig.secretName }}    
+{{- end }}
