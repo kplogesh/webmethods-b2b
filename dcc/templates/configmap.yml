@@ -1,0 +1,18 @@
+{{- if .Values.jobForDCCAssets.enabled }} 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dcc-runtime.fullname" . }}
+  labels:
+    {{- include "dcc-runtime.labels" . | nindent 4 }}
+  {{- with .Values.jobForDCCAssets.podConfig.annotations }} 
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  DB_TYPE: {{ .Values.jobForDCCAssets.podConfig.primaryContainer.dbType }} 
+  DB_IS_URL: {{ .Values.jobForDCCAssets.podConfig.primaryContainer.dbISURL }} 
+  DB_MWS_URL: {{ .Values.jobForDCCAssets.podConfig.primaryContainer.dbMWSURL }} 
+  DB_TABLESPACE: {{ .Values.jobForDCCAssets.podConfig.primaryContainer.dbTablespace }} 
+  DB_TABLESPACEINDEX: {{ .Values.jobForDCCAssets.podConfig.primaryContainer.dbTablespaceIndex }} 
+{{- end }}

@@ -17,17 +17,17 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
-      {{- with .Values.podConfig.affinity }}   
+      {{- with .Values.jobForTNDBAssets.podConfig.affinity }}   
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}      
-      {{- with .Values.podConfig.tolerations }}                           
+      {{- with .Values.jobForTNDBAssets.podConfig.tolerations }}                           
       tolerations:
         {{- toYaml . | nindent 8 }}    
       {{- end }} 
       securityContext:
-        {{- toYaml .Values.podConfig.podSecurityContext | nindent 8 }} 
-      serviceAccountName: {{ .Values.podConfig.serviceAccountName }}
+        {{- toYaml .Values.jobForTNDBAssets.podConfig.podSecurityContext | nindent 8 }} 
+      serviceAccountName: {{ .Values.jobForTNDBAssets.podConfig.serviceAccountName }}
       restartPolicy: {{ .Values.jobForTNDBAssets.podConfig.restartPolicy }}
       containers:
       - name: {{ include "microservices-runtime.fullname" . }}-job-primary-container

@@ -1,0 +1,52 @@
+---
+fullnameOverride: ""
+nameOverride: ""
+environment: dev
+# Job Configurations
+jobForDCCAssets:
+  enabled: true
+  backoffLimit: 15
+  completions: 1
+  podConfig: 
+    restartPolicy: Never
+    annotations:
+      sidecar.istio.io/inject: "false"
+      "helm.sh/hook": pre-install
+    tolerations: 
+      - key: "app"
+        operator: "Equal"
+        value: "b2b"
+        effect: "NoSchedule" 
+    # Options for node affinity for pod placement is required | preferred. Whether affinity is required or not is decided by setNodeAffinity parameter that can be set to true | false
+    affinity: 
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - "b2b" 
+    #securityConext values
+    podSecurityContext:
+      fsGroup: 1724
+      runAsUser: 1724
+    # Service account name
+    serviceAccountName: b2b-sa
+    appName: b2b
+    # Secrets
+    secretName: b2b-secrets
+    # Secret to be used to pull the image from repository
+    imagePullSecrets: regcred
+    # Container configurations residing in a pod
+    primaryContainer:
+      image: 
+        repository: wmmsrtn
+        tag: "10.15.0" 
+        pullPolicy: IfNotPresent
+      dbType: sqlserver
+      dbMWSURL: jdbc:wm:sqlserver://mssql-deployment.rdbms:1433;databaseName=devmws  
+      dbISURL: jdbc:wm:sqlserver://mssql-deployment.rdbms:1433;databaseName=devwmis  
+      dbTablespace: test
+      dbTablespaceIndex: test
+  # Pod configuration ends here.
