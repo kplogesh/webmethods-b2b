@@ -7,32 +7,39 @@ metadata:
 data:
 {{- $fileName := printf "%s/%s/%s" (tpl .Values.environment . ) "application" (tpl .Values.podConfig.primaryContainer.applicationPropertiesFileName . ) }}
   {{ $fileName | base}}: |-
-{{ .Files.Get $fileName | indent 4 }}
+{{ (tpl ( .Files.Get $fileName ) . ) | indent 4 }}
 {{- $fileName := printf "%s/%s/%s" (tpl .Values.environment . ) "application" (tpl .Values.podConfig.primaryContainer.ediintFileName . ) }}
   {{ $fileName | base}}: |-
-{{ .Files.Get $fileName | indent 4 }}
+{{ (tpl ( .Files.Get $fileName ) . ) | indent 4 }}
 {{- $fileName := printf "%s/%s/%s" (tpl .Values.environment . ) "licenses" (tpl .Values.podConfig.primaryContainer.msrLicenseFileName . ) }}
   {{ $fileName | base}}: |-
-{{ .Files.Get $fileName | indent 4 }}
+{{ (tpl ( .Files.Get $fileName ) . ) | indent 4 }}
 {{- $fileName := printf "%s/%s/%s" (tpl .Values.environment . ) "licenses" (tpl .Values.podConfig.primaryContainer.tcLicenseFileName . ) }}
   {{ $fileName | base}}: |-
-{{ .Files.Get $fileName | indent 4 }}   
+{{ (tpl ( .Files.Get $fileName ) . ) | indent 4 }} 
   {{- if .Values.podConfig.dependencies.enabled }}   
   dependency.sh: |-
     echo "Validating the dependent connections!"
 
-    while [ $(timeout 1 sh -c "</dev/tcp/{{ .Values.podConfig.dependencies.um.serviceName }}/{{ .Values.podConfig.dependencies.um.servicePort }}" && echo 0 || echo 1 ) -ne 0 ]; do
-      echo "Waiting for the {{ .Values.podConfig.dependencies.um.serviceName }} service availability..."
+    while [ $(timeout 1 sh -c "</dev/tcp/{{ .Release.Name }}-{{ .Values.podConfig.dependencies.um.chartName }}/{{ .Values.podConfig.dependencies.um.servicePort }}" && echo 0 || echo 1 ) -ne 0 ]; do
+      echo "Waiting for the {{ .Release.Name }}-{{ .Values.podConfig.dependencies.um.chartName }} service availability..."
       sleep 5;
     done
-    echo "Connection to {{ .Values.podConfig.dependencies.um.serviceName }} is available..."
+    echo "Connection to {{ .Release.Name }}-{{ .Values.podConfig.dependencies.um.chartName }} is available..."
 
-    while [ $(timeout 1 sh -c "</dev/tcp/{{ .Values.podConfig.dependencies.terracottaBigmemoryMax.serviceName }}/{{ .Values.podConfig.dependencies.terracottaBigmemoryMax.servicePort }}" && echo 0 || echo 1 ) -ne 0 ]; do
-      echo "Waiting for the {{ .Values.podConfig.dependencies.terracottaBigmemoryMax.serviceName }} service availability..."
+    while [ $(timeout 1 sh -c "</dev/tcp/{{ .Release.Name }}-{{ .Values.podConfig.dependencies.terracottaBigmemoryMax.chartName }}-0.{{ .Release.Name }}-{{ .Values.podConfig.dependencies.terracottaBigmemoryMax.chartName }}-h/{{ .Values.podConfig.dependencies.terracottaBigmemoryMax.servicePort }}" && echo 0 || echo 1 ) -ne 0 ]; do
+      echo "Waiting for the {{ .Values.podConfig.dependencies.terracottaBigmemoryMax.chartName }} service availability..."
       sleep 5;
     done
 
-    echo "Connection to {{ .Values.podConfig.dependencies.terracottaBigmemoryMax.serviceName }} is available..."
+    echo "Connection to {{ .Release.Name }}-{{ .Values.podConfig.dependencies.terracottaBigmemoryMax.chartName }} is available..."
+
+    while [ $(timeout 1 sh -c "</dev/tcp/{{ .Release.Name }}-{{ .Values.podConfig.dependencies.mws.chartName }}/{{ .Values.podConfig.dependencies.mws.servicePort }}" && echo 0 || echo 1 ) -ne 0 ]; do
+      echo "Waiting for the {{ .Release.Name }}-{{ .Values.podConfig.dependencies.mws.chartName }} service availability..."
+      sleep 5;
+    done
+
+    echo "Connection to {{ .Release.Name }}-{{ .Values.podConfig.dependencies.mws.chartName }} is available..."
 
     echo "Initialization Completed!"
   {{- end }}

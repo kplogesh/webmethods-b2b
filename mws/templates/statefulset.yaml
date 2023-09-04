@@ -44,10 +44,29 @@ spec:
         # Resources required for the MSR to function. CPUs and Memory configurations.
           resources:
             {{- toYaml .Values.podConfig.primaryContainer.resources | nindent 12 }} 
-          {{- with .Values.podConfig.primaryContainer.env }} 
           env:
-            {{- toYaml . | nindent 12 }} 
-          {{- end }}
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef: 
+                  name: {{ .Values.podConfig.secretName }}
+                  key: DB_MWS_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef: 
+                  name:  {{ .Values.podConfig.secretName }}
+                  key: DB_MWS_PASSWORD
+            - name: DB_TYPE
+              valueFrom:
+                configMapKeyRef: 
+                  name: {{ include "mws.fullname" . }}
+                  key: DB_TYPE        
+            - name: DB_URL
+              valueFrom:
+                configMapKeyRef: 
+                  name: {{ include "mws.fullname" . }}
+                  key: DB_URL
+            - name: NODE_NAME
+              value: mws
           ports:
             {{- toYaml .Values.podConfig.primaryContainer.ports | nindent 12 }} 
           {{- with .Values.podConfig.primaryContainer.livenessProbe }}

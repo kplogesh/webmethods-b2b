@@ -19,11 +19,14 @@ podConfig:
   dependencies:
     enabled: true
     um:
-      serviceName: messaging-um
+      chartName: um
       servicePort: 9000
     terracottaBigmemoryMax:
-      serviceName: terracotta-bigmemorymax-0.terracotta-bigmemorymax-h
+      chartName: terracotta-bigmemorymax
       servicePort: 9510
+    mws:
+      chartName: mws
+      servicePort: 8585
   autoScaling: 
     enabled: false 
     minReplicas: 1

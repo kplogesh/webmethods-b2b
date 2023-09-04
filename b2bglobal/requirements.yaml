@@ -1,0 +1,16 @@
+dependencies:
+- name: dcc
+  version: "10.15"
+  repository: "file://../dcc"
+- name: alpha-msr
+  version: "10.15"
+  repository: "file://../alpha-msr"
+- name: mws
+  version: "10.15"
+  repository: "file://../mws"
+- name: um
+  version: "10.15"
+  repository: "file://../um"
+- name: terracotta-bigmemorymax
+  version: "4.4"
+  repository: "file://../terracotta-bigmemorymax"
