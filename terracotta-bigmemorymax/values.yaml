@@ -44,6 +44,7 @@ podConfig:
     nodeCountPerStripe: 2
     restartable: false
     jsonLogging: false
+    lifecycle: []
     storeSize: "2G"
     # Can be used for passing some jvm related options for terracotta servers.
     serverOpts: ""
