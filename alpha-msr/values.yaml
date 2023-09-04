@@ -188,6 +188,7 @@ jobForTNDBAssets:
     annotations:
       sidecar.istio.io/inject: "false"
       "helm.sh/hook": pre-install
+      "helm.sh/hook-delete-policy": "hook-succeeded"
     tolerations: 
       - key: "app"
         operator: "Equal"

@@ -3,6 +3,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: {{ .Values.persistentVolumeClaimName }}
   labels:
-    {{- include "common.labels" . | nindent 4 }}
+    {{- include "b2bglobal.labels" . | nindent 4 }}
 spec:
 {{ toYaml .Values.persistentVolumeClaim | indent 2 }}
