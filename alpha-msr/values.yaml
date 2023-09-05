@@ -134,6 +134,9 @@ podConfig:
     nfsPath: /b2bdir/demo
     containerPath: /b2bdir
     secretsPath: /etc/secrets
+    isJdbcURL: "jdbc:wm:sqlserver://mssql-deployment.rdbms:1433;databaseName=devwmis"
+    mwsJdbcURL: "jdbc:wm:sqlserver://mssql-deployment.rdbms:1433;databaseName=devmws"
+    rdbmsDriver: DataDirect Connect JDBC SQL Server Driver
     # PostStart command execution
     lifecycle:
       postStart:

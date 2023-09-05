@@ -96,7 +96,7 @@ podConfig:
       periodSeconds: 5
       successThreshold: 1
       timeoutSeconds: 5
-      failureThreshold: 120
+      failureThreshold: 100
     # Volume mount required for the application to function
     runtimePath: /opt/softwareag/run
     tcConfigPath: /opt/softwareag/config/tc-config.xml
