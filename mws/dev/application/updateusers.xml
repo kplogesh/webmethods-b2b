@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<CONFIG>
+	<CONTEXT alias="system.directory.user.storage">
+		<wm_xt_sysdiruser name="sysadmin" password="manage123" />
+		<wm_xt_sysdiruser name="Administrator" password="manage123" disabled="false" passwordValidUntil="-1" />
+	</CONTEXT>
+</CONFIG>

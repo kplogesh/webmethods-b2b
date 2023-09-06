@@ -67,6 +67,8 @@ spec:
                   key: DB_URL
             - name: NODE_NAME
               value: mws
+            - name: frontEndURL
+              value: http://{{ include "mws.fullname" $ }}.{{ $.Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}
           ports:
             {{- toYaml .Values.podConfig.primaryContainer.ports | nindent 12 }} 
           {{- with .Values.podConfig.primaryContainer.livenessProbe }}
@@ -86,6 +88,15 @@ spec:
               name: diskstore
             - mountPath: {{ .Values.podConfig.primaryContainer.wsclientGlobalPath }}
               subPath: {{ .Values.podConfig.primaryContainer.wsclientGlobalFileName }}
+              name: config
+            - mountPath: {{ .Values.podConfig.primaryContainer.userFilePath }}
+              subPath: {{ .Values.podConfig.primaryContainer.userFileName }}
+              name: config
+            - mountPath: {{ .Values.podConfig.primaryContainer.clusterFilePath }}
+              subPath: {{ .Values.podConfig.primaryContainer.clusterFileName }}
+              name: config
+            - mountPath: {{ .Values.podConfig.primaryContainer.customWrapperFilePath }}
+              subPath: {{ .Values.podConfig.primaryContainer.customWrapperFileName }}
               name: config
       imagePullSecrets:
         - name: {{ .Values.podConfig.imagePullSecrets }}   

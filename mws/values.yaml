@@ -129,8 +129,15 @@ podConfig:
 
     # PostStart command execution
     lifecycle: []
+    # Intercommunication credential updates | default user password updates
     wsclientGlobalFileName: wsclient.global.xml
-    wsclientGlobalPath: /opt/mws/MWS/volumes/configs/asset_cfg/wsclient.global.xml
+    wsclientGlobalPath: /opt/mws/MWS/volumes/configs/assets_cfg/wsclient.global.xml
+    userFileName: updateusers.xml
+    userFilePath: /opt/mws/MWS/volumes/configs/assets_cfg/updateusers.xml
+    clusterFileName: cluster.xml
+    clusterFilePath: /opt/mws/MWS/volumes/configs/cluster_cfg/cluster.xml
+    customWrapperFileName: custom_wrapper.conf
+    customWrapperFilePath: /opt/mws/MWS/volumes/configs/profile_cfg/custom_wrapper.conf
 # Pod configuration ends here.
 
 #Service definition

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Cluster clusterId="-2062963963" container="true" frontEndURL="${env:frontEndURL}" useDBJms="true">
+	<!-- lists all physical servers in the cluster -->
+	<Category name="servers">
+		<Component class="com.webmethods.portal.system.cluster.impl.Server" enabled="true" name="mws" nodeType="MWS">
+			<Properties host="{{ include "mws.fullname" $ }}-0.{{ include "mws.fullname" $ }}-h.{{ $.Release.Namespace }}.svc.cluster.local" name="http" port="{{ .Values.service.port }}"/>
+			<Properties host="{{ include "mws.fullname" $ }}-0.{{ include "mws.fullname" $ }}-h.{{ $.Release.Namespace }}.svc.cluster.local" name="https" port="0"/>
+			<Role name="autodeploy"/>
+			<Role name="search"/>
+			<Role name="taskengine"/>
+			<Role name="notification"/>
+		</Component>
+	</Category>
+</Cluster>

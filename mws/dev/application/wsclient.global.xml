@@ -4,7 +4,7 @@
 		<enventries>
 			<entry ftype="java.lang.Boolean" fvalue="true" key="wsclient.global.basicauth-enabled" />
 			<entry ftype="java.lang.String" fvalue="Administrator" key="wsclient.global.basicauth-username" />
-			<entry ftype="java.lang.String" fvalue="manage" key="wsclient.global.basicauth-password" />
+			<entry ftype="java.lang.String" fvalue="manage123" key="wsclient.global.basicauth-password" />
 		</enventries>
 	</runtime_config>
 </CONFIG>

@@ -9,4 +9,13 @@ data:
   DB_URL: jdbc:wm:sqlserver://mssql-deployment.rdbms:1433;databaseName=devmws
 {{- $fileName := printf "%s/%s" (tpl .Values.environment . ) "application/wsclient.global.xml" }}
   {{ $fileName | base}}: |-
-{{ .Files.Get $fileName | indent 4 }}
+{{ (tpl ( .Files.Get $fileName ) . ) | indent 4 }} 
+{{- $fileName := printf "%s/%s" (tpl .Values.environment . ) "application/updateusers.xml" }}
+  {{ $fileName | base}}: |-
+{{ (tpl ( .Files.Get $fileName ) . ) | indent 4 }} 
+{{- $fileName := printf "%s/%s" (tpl .Values.environment . ) "application/cluster.xml" }}
+  {{ $fileName | base}}: |-
+{{ (tpl ( .Files.Get $fileName ) . ) | indent 4 }} 
+{{- $fileName := printf "%s/%s" (tpl .Values.environment . ) "application/custom_wrapper.conf" }}
+  {{ $fileName | base}}: |-
+{{ (tpl ( .Files.Get $fileName ) . ) | indent 4 }} 

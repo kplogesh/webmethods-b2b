@@ -22,8 +22,8 @@ data:
             <management-port>9540</management-port>
             <data>{{ $.Values.podConfig.primaryContainer.runtimePath }}/data</data>
             <logs>{{ $.Values.podConfig.primaryContainer.runtimePath }}/logs</logs>
-            <dataStorage size={{ $.Values.podConfig.primaryContainer.storeSize | quote }}>
-              <offheap size={{ $.Values.podConfig.primaryContainer.storeSize | quote }}/>
+            <dataStorage size={{ $.Values.podConfig.primaryContainer.dataStoreSize | quote }}>
+              <offheap size={{ $.Values.podConfig.primaryContainer.offHeapSize | quote }}/>
             </dataStorage>
             {{- if eq $.Values.podConfig.primaryContainer.security true }}
             <security>
