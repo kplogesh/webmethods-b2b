@@ -190,7 +190,7 @@ jobForTNDBAssets:
     restartPolicy: Never
     annotations:
       sidecar.istio.io/inject: "false"
-      "helm.sh/hook": pre-install
+      "helm.sh/hook": pre-install,pre-upgrade
       "helm.sh/hook-delete-policy": "hook-succeeded"
     tolerations: 
       - key: "app"

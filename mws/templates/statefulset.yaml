@@ -67,7 +67,7 @@ spec:
                   key: DB_URL
             - name: NODE_NAME
               value: mws
-            - name: frontEndURL
+            - name: frontEndUrl
               value: http://{{ include "mws.fullname" $ }}.{{ $.Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}
           ports:
             {{- toYaml .Values.podConfig.primaryContainer.ports | nindent 12 }} 
