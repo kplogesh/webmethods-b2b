@@ -16,7 +16,7 @@ data:
     {{- range $i := until (int $.Values.podConfig.primaryContainer.stripeCount) }}
         <mirror-group>
     {{- range $j := until (int $.Values.podConfig.primaryContainer.nodeCountPerStripe) }}
-          <server host="{{ include "terracotta-bigmemorymax.fullname" $ }}-{{ add (mul $i $.Values.nodeCountPerStripe) $j }}.{{ include "terracotta-bigmemorymax.fullname" $ }}-h.{{ $.Release.Namespace }}.svc.cluster.local" name="{{ include "terracotta-bigmemorymax.fullname" $ }}-{{ add (mul $i $.Values.podConfig.primaryContainer.nodeCountPerStripe) $j }}.{{ include "terracotta-bigmemorymax.fullname" $ }}-h.{{ $.Release.Namespace }}.svc.cluster.local">
+          <server host="{{ include "terracotta-bigmemorymax.fullname" $ }}-{{ add (mul $i $.Values.podConfig.primaryContainer.nodeCountPerStripe) $j }}.{{ include "terracotta-bigmemorymax.fullname" $ }}-h.{{ $.Release.Namespace }}.svc.cluster.local" name="{{ include "terracotta-bigmemorymax.fullname" $ }}-{{ add (mul $i $.Values.podConfig.primaryContainer.nodeCountPerStripe) $j }}.{{ include "terracotta-bigmemorymax.fullname" $ }}-h.{{ $.Release.Namespace }}.svc.cluster.local">
             <tsa-port>9510</tsa-port>
             <tsa-group-port>9530</tsa-group-port>
             <management-port>9540</management-port>
