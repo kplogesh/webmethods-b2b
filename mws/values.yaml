@@ -119,6 +119,7 @@ podConfig:
       periodSeconds: 20
       successThreshold: 1
     # Startup probe for the application to be ready. Pauses readiness/liveness probe till startup is successful
+    # update to health http/
     startupProbe:
       tcpSocket:
         port: 8585
